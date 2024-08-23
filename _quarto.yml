@@ -7,8 +7,8 @@ website:
     left:
       - text: "Hands-on Exercise"
         menu:
-        - text: "Hands-on Exercise 1"
-          href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex01.html"
+        - text: "1.1 - Geospatial Data Wrangling with R"
+          href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex011.html"
     right:
       - href: index.qmd
         text: Home
@@ -19,6 +19,8 @@ format:
     theme: zephyr
     css: styles.css
     toc: true
+    number-sections: true
+    code-copy: true
 
 editor: visual
 
