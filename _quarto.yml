@@ -9,6 +9,16 @@ website:
         menu:
         - text: "1.1 - Geospatial Data Wrangling with R"
           href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex011.html"
+        - text: "1.2 - Choropleth Mapping with R"
+          href: "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex012.html"
+      - text: "In-class Exercise"
+        menu: 
+        - text: " Exercise 1"
+          href: "In-class_Ex/In-class_Ex01/In-class_Ex01.html"
+      - text: "Take-home Exercise"
+        menu: 
+        - text: " Exercise 1"
+          href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html"
     right:
       - href: index.qmd
         text: Home

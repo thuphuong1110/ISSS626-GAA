@@ -1,8 +1,8 @@
 ---
-title: "Hands-on Exercise 1"
+title: "Hands-on Exercise 1.1: Geospatial Data Wrangling with R"
 author: "Nguyen Bao Thu Phuong"
 date: "23 August 2024" 
-date-modified: "23 August 2024" 
+date-modified: "23 August 2024"
 ---
 
 # Getting Started
