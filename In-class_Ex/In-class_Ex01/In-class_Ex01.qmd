@@ -1,0 +1,68 @@
+---
+title: "In-class Exercise 1"
+author: "Nguyen Bao Thu Phuong"
+date: "26 August 2024"
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Load the R packages
+
+```{r}
+pacman::p_load(tidyverse, sf, tmap, ggstatsplot)
+```
+# Import Geospatial Data
+
+## Master Plan 2014 Subzone Boundary 
+
+Import master plan 2014 in shapefile and kml format
+```{r}
+mpsz14_shp = st_read(dsn = 'data', layer = 'MP14_SUBZONE_WEB_PL')
+```
+
+```{r}
+#| eval: false
+mpsz14_kml = st_read("data/MasterPlan2014SubzoneBoundaryWebKML.kml")
+```
+
+As the kml file downloaded is corrupted, we can write the shapefile back as kml format using below code chunk. 
+
+```{r}
+st_write(mpsz14_shp,
+         "data/MP14_SUBZONE_WEB_PL.kml",
+         delete_dsn = TRUE)
+```
+## Master Plan 2019 Subzone Boundary
+
+Next we load the master plan 2019 in shapefile and kml.
+
+::: panel-tabset
+
+### Shapefile
+
+```{r}
+mpsz19_shp = st_read(dsn = "data", layer = "MPSZ-2019")
+```
+The shapefile is in geographic coordinate system wgs84. This is commonly used in maps application on phone, as it's useful to recognize a location. However, this is not appropriate to be used in geospatial analysis as wgs84 reflects the degree of the lat-long, impacting the distance measurement. For this purpose, projected coordinate system should be used.
+
+### KML format
+
+```{r}
+mpsz19_kml = st_read("data/MasterPlan2019SubzoneBoundaryNoSeaKML.kml")
+```
+:::
+
+# Handling Coordinate System
+
+## Transform coordinate system
+
+`mpsz19_shp` is reprojected from geodetic CRS to projected coordinate system using below code chunk.
+```{r}
+mpsz19_shp = st_read(dsn = "data",
+                     layer = "MPSZ-2019") %>%
+  st_transform(crs = 3414)
+```

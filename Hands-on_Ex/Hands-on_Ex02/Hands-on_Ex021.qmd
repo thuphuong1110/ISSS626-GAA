@@ -1,0 +1,136 @@
+---
+title: "Hands-on Exercise 2.1: 1st Order Spatial Point Patterns Analysis Methods"
+author: "Nguyen Bao Thu Phuong"
+date: "24 August 2024" 
+date-modified: "last-modified"
+date-format: "DD MMMM YYYY"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Overview
+
+Spatial Point Pattern Analysis examines the pattern or distribution of points on a surface. These points can represent locations of events such as crimes, traffic accidents, or disease outbreaks, as well as business services (like coffee shops and fast food outlets) or facilities like childcare and eldercare centers.
+
+In this hands-on exercise, we will use functions from the **spatstat** package to explore the spatial distribution of childcare centers in Singapore.
+
+The key questions we aim to answer are:
+
+1.  Are the childcare centers in Singapore randomly distributed across the country?
+2.  If not, where are the areas with a higher concentration of childcare centers?
+
+# Data Acquisition
+
+The datasets required for this exercise are extracted from the below public data sources:
+
+-   `CHILDCARE`: A point feature dataset that provides both location and attribute information of childcare centers. This dataset was downloaded from <a href="https://beta.data.gov.sg/datasets/d_5d668e3f544335f8028f546827b773b4/view" target="_blank">data.gov.sg</a> in GeoJSON format.
+
+-   `MP14_SUBZONE_WEB_PL`: A polygon feature dataset that contains information on the URA 2014 Master Plan Planning Subzone boundaries. This dataset is in ESRI Shapefile format and was also downloaded from <a href="https://beta.data.gov.sg/datasets/d_d14da225fccf921049ab64238ff473d9/view" target="_blank">data.gov.sg</a>.
+
+-   CostalOutline: A polygon feature dataset that shows the national boundary of Singapore. This dataset is provided by the Singapore Land Authority (SLA) and is in ESRI Shapefile format.
+
+# Import R Packages
+
+*p_load()* of pacman package is used to install and load **sf**, **tmap**, **tidyverse**, **spatstat** and **raster** packages into R environment.
+
+```{r}
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
+```
+
+# Spatial Data Wrangling
+
+## Import Spatial Data
+
+First we use *st_read()* of sf package used to import these three geospatial data sets into R.
+
+```{r}
+childcare_sf <- st_read("data/ChildCareServices.geojson") %>%
+  st_transform(crs = 3414)
+```
+
+```{r}
+sg_sf <- st_read("data/NationalMapPolygon.kml")
+```
+
+```{r}
+mpsz_sf <- st_read(dsn = "data", 
+                layer = "MP14_SUBZONE_WEB_PL")
+```
+
+## Update appropriate EPSG Code and Coordinate system
+
+First, we check the predefined coordinate system of mpsz simple feature data frame using st_crs() of sf package.
+
+```{r}
+st_crs(mpsz_sf)
+```
+
+**Output interpretation**: The last lines of the print shows that EPSG code 9001 is used instead of the correct EPSG code 3414 for coordinate reference system svy21. The correct EPSG code is assigned to `mpsz_sf` data frame using *st_set_crs()* of sf package as below.
+
+```{r}
+#| warning: false
+mpsz_sf <- st_set_crs(mpsz_sf,3414)
+```
+
+We check the CRS again.
+
+```{r}
+st_crs(mpsz_sf)
+```
+
+The EPSG code is now 3414.
+
+Transform `childcare_sf` to projected coordinate system
+
+```{r}
+childcare_sf <- st_transform(childcare_sf, crs=3414)
+```
+
+Checking the CRS again
+
+```{r}
+st_geometry(childcare_sf)
+```
+
+The data is in svy21 projected coordinate system now. The Bounding box shows that values are greater than 0-360 range of decimal degree commonly used by most of the geographic coordinate systems.
+
+## Plot the Map from geospatial data sets
+
+After verifying the coordinate reference system (CRS) of each geospatial dataset, it is also helpful to plot a map to visualize their spatial patterns.
+
+```{r}
+tm_shape(mpsz_sf) +
+  tm_polygons() +
+tm_shape(childcare_sf) +
+  tm_dots()
+```
+
+Notice that all the geospatial layers share the same map extent, indicating that their coordinate reference systems and values are aligned to the same spatial context. This alignment is crucial for any geospatial analysis.
+
+Alternatively, we can create a pin map using the code snippet below.
+
+```{r}
+#tmap_mode('view')
+#tm_shape(childcare_sf)+
+#  tm_dots()
+```
+
+```{r}
+#| warning: false
+tmap_mode('plot')
+```
+
+In interactive mode, tmap uses the Leaflet for R API. The benefit of this interactive pin map is that it allows us to freely navigate and zoom in or out. Additionally, we can click on each point to query detailed information about that feature. You can also change the background of the online map layer. Three options are currently available: ESRI.WorldGrayCanvas, OpenStreetMap, and ESRI.WorldTopoMap, with ESRI.WorldGrayCanvas set as the default.
+
+**Note**: Always switch back to plot mode after using the interactive map, as each interactive session consumes a connection. Additionally, to prevent issues when publishing on Netlify, avoid displaying an excessive number of interactive maps (no more than 10) in a single RMarkdown document.
+
+# Geospatial Data wrangling
+
+Although simple feature data frames are becoming increasingly popular compared to the sp package’s Spatial\* classes, many geospatial analysis packages still require geospatial data in the sp package's Spatial\* format. In this section, you explore how to convert a simple feature data frame to an sp Spatial\* class.
+
+## Convert sf data frames to sp’s Spatial\* class
+
+The code snippet below uses the as_Spatial() function from the sf package to convert the three geospatial datasets from simple feature data frames to sp Spatial\* classes.
