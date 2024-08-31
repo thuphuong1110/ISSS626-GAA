@@ -4,7 +4,7 @@
     "href": "index.html",
     "title": "ISSS626-GAA",
     "section": "",
-    "text": "Welcome to ISSS626 Geospatial Analysis and Application homepage. In this website, you will find my coursework prepared for this course."
+    "text": "Welcome to my ISSS626 Geospatial Analysis and Application homepage. In this website, you will find my coursework prepared for this course."
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex011.html",
@@ -212,30 +212,30 @@
   {
     "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html",
     "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html",
-    "title": "In-class Exercise 1",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
     "section": "",
     "text": "pacman::p_load(tidyverse, sf, tmap, ggstatsplot)"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#master-plan-2014-subzone-boundary",
     "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#master-plan-2014-subzone-boundary",
-    "title": "In-class Exercise 1",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
     "section": "2.1 Master Plan 2014 Subzone Boundary",
-    "text": "2.1 Master Plan 2014 Subzone Boundary\nImport master plan 2014 in shapefile and kml format\n\nmpsz14_shp = st_read(dsn = 'data', layer = 'MP14_SUBZONE_WEB_PL')\n\nReading layer `MP14_SUBZONE_WEB_PL' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data' \n  using driver `ESRI Shapefile'\nSimple feature collection with 323 features and 15 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33\nProjected CRS: SVY21\n\n\n\nmpsz14_kml = st_read(\"data/MasterPlan2014SubzoneBoundaryWebKML.kml\")\n\nAs the kml file downloaded is corrupted, we can write the shapefile back as kml format using below code chunk.\n\nst_write(mpsz14_shp,\n         \"data/MP14_SUBZONE_WEB_PL.kml\",\n         delete_dsn = TRUE)\n\nDeleting source `data/MP14_SUBZONE_WEB_PL.kml' using driver `KML'\nWriting layer `MP14_SUBZONE_WEB_PL' to data source \n  `data/MP14_SUBZONE_WEB_PL.kml' using driver `KML'\nWriting 323 features with 15 fields and geometry type Multi Polygon."
+    "text": "2.1 Master Plan 2014 Subzone Boundary\nImport Master Plan 2014 Subzone Boundary in shapefile and kml format\n\nShapefileKML\n\n\n\nmpsz14_shp = st_read(dsn = 'data', layer = 'MP14_SUBZONE_WEB_PL')\n\nReading layer `MP14_SUBZONE_WEB_PL' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data' \n  using driver `ESRI Shapefile'\nSimple feature collection with 323 features and 15 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: 2667.538 ymin: 15748.72 xmax: 56396.44 ymax: 50256.33\nProjected CRS: SVY21\n\n\n\n\n\nmpsz14_kml = st_read(\"data/MasterPlan2014SubzoneBoundaryWebKML.kml\")\n\nAs the kml file downloaded is corrupted, we can write the shapefile back as kml format using below code chunk.\n\nst_write(mpsz14_shp,\n         \"data/MP14_SUBZONE_WEB_PL.kml\",\n         delete_dsn = TRUE)\n\nDeleting source `data/MP14_SUBZONE_WEB_PL.kml' using driver `KML'\nWriting layer `MP14_SUBZONE_WEB_PL' to data source \n  `data/MP14_SUBZONE_WEB_PL.kml' using driver `KML'\nWriting 323 features with 15 fields and geometry type Multi Polygon."
   },
   {
     "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#master-plan-2019-subzone-boundary",
     "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#master-plan-2019-subzone-boundary",
-    "title": "In-class Exercise 1",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
     "section": "2.2 Master Plan 2019 Subzone Boundary",
     "text": "2.2 Master Plan 2019 Subzone Boundary\nNext we load the master plan 2019 in shapefile and kml.\n\nShapefileKML format\n\n\n\nmpsz19_shp = st_read(dsn = \"data\", layer = \"MPSZ-2019\")\n\nReading layer `MPSZ-2019' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data' \n  using driver `ESRI Shapefile'\nSimple feature collection with 332 features and 6 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775\nGeodetic CRS:  WGS 84\n\n\nThe shapefile is in geographic coordinate system wgs84. This is commonly used in maps application on phone, as it’s useful to recognize a location. However, this is not appropriate to be used in geospatial analysis as wgs84 reflects the degree of the lat-long, impacting the distance measurement. For this purpose, projected coordinate system should be used.\n\n\n\nmpsz19_kml = st_read(\"data/MasterPlan2019SubzoneBoundaryNoSeaKML.kml\")\n\nReading layer `URA_MP19_SUBZONE_NO_SEA_PL' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data\\MasterPlan2019SubzoneBoundaryNoSeaKML.kml' \n  using driver `KML'\nSimple feature collection with 332 features and 2 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY, XYZ\nBounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775\nz_range:       zmin: 0 zmax: 0\nGeodetic CRS:  WGS 84"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#transform-coordinate-system",
     "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#transform-coordinate-system",
-    "title": "In-class Exercise 1",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
     "section": "3.1 Transform coordinate system",
-    "text": "3.1 Transform coordinate system\nmpsz19_shp is reprojected from geodetic CRS to projected coordinate system using below code chunk.\n\nmpsz19_shp = st_read(dsn = \"data\",\n                     layer = \"MPSZ-2019\") %&gt;%\n  st_transform(crs = 3414)\n\nReading layer `MPSZ-2019' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data' \n  using driver `ESRI Shapefile'\nSimple feature collection with 332 features and 6 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775\nGeodetic CRS:  WGS 84"
+    "text": "3.1 Transform coordinate system\nWe import Master Plan Sub-zone 2019 and Pre-school location again and reproject from geodetic CRS to projected coordinate system using below code chunk.\nImport Master Plan Sub-zone 2019\n\nmpsz19_shp = st_read(dsn = \"data\",\n                     layer = \"MPSZ-2019\") %&gt;%\n  st_transform(crs = 3414)\n\nReading layer `MPSZ-2019' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data' \n  using driver `ESRI Shapefile'\nSimple feature collection with 332 features and 6 fields\nGeometry type: MULTIPOLYGON\nDimension:     XY\nBounding box:  xmin: 103.6057 ymin: 1.158699 xmax: 104.0885 ymax: 1.470775\nGeodetic CRS:  WGS 84\n\n\nImport Pre-school location\n\npreschool &lt;- st_read(\"data/PreSchoolsLocation.kml\") %&gt;%\n  st_transform(crs = 3414)\n\nReading layer `PRESCHOOLS_LOCATION' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data\\PreSchoolsLocation.kml' \n  using driver `KML'\nSimple feature collection with 2290 features and 2 fields\nGeometry type: POINT\nDimension:     XYZ\nBounding box:  xmin: 103.6878 ymin: 1.247759 xmax: 103.9897 ymax: 1.462134\nz_range:       zmin: 0 zmax: 0\nGeodetic CRS:  WGS 84"
   },
   {
     "objectID": "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex021.html#convert-the-spatial-class-into-generic-sp-format",
@@ -460,5 +460,68 @@
     "title": "Hands-on Exercise 2.2: 2nd Order Spatial Point Patterns Analysis Methods",
     "section": "5.7 Extract study areas",
     "text": "5.7 Extract study areas\nThe below code chunk is used to extract the 4 target planning areas.\n\npg &lt;- mpsz_sf %&gt;%\n  filter(PLN_AREA_N == \"PUNGGOL\")\ntm &lt;- mpsz_sf %&gt;%\n  filter(PLN_AREA_N == \"TAMPINES\")\nck &lt;- mpsz_sf %&gt;%\n  filter(PLN_AREA_N == \"CHOA CHU KANG\")\njw &lt;- mpsz_sf %&gt;%\n  filter(PLN_AREA_N == \"JURONG WEST\")\n\nPlot the target planning areas.\n\npar(mfrow=c(2,2))\nplot(pg, main = \"Ponggol\")\n\nWarning: plotting the first 9 out of 15 attributes; use max.plot = 15 to plot\nall\n\n\n\n\n\n\n\n\n\n\nplot(tm, main = \"Tampines\")\n\nWarning: plotting the first 9 out of 15 attributes; use max.plot = 15 to plot\nall\n\n\n\n\n\n\n\n\n\n\nplot(ck, main = \"Choa Chu Kang\")\n\nWarning: plotting the first 10 out of 15 attributes; use max.plot = 15 to plot\nall\n\n\n\n\n\n\n\n\n\n\nplot(jw, main = \"Jurong West\")\n\nWarning: plotting the first 9 out of 15 attributes; use max.plot = 15 to plot\nall\n\n\n\n\n\n\n\n\n\n\n5.7.1 Create owin object\nWe convert these sf objects into owin objects as required by spatstat.\n\npg_owin = as.owin(pg)\ntm_owin = as.owin(tm)\nck_owin = as.owin(ck)\njw_owin = as.owin(jw)\n\n\n\n5.7.2 Combine childcare points and the study area\nWe extract childcare centres within the selected regions for further analysis.\n\nchildcare_pg_ppp = childcare_ppp_jit[pg_owin]\nchildcare_tm_ppp = childcare_ppp_jit[tm_owin]\nchildcare_ck_ppp = childcare_ppp_jit[ck_owin]\nchildcare_jw_ppp = childcare_ppp_jit[jw_owin]\n\nNext, rescale.ppp() function is used to transform the unit of measurement from metre to kilometre.\n\nchildcare_pg_ppp.km = rescale.ppp(childcare_pg_ppp, 1000, \"km\")\nchildcare_tm_ppp.km = rescale.ppp(childcare_tm_ppp, 1000, \"km\")\nchildcare_ck_ppp.km = rescale.ppp(childcare_ck_ppp, 1000, \"km\")\nchildcare_jw_ppp.km = rescale.ppp(childcare_jw_ppp, 1000, \"km\")\n\nThe code chunk below plot these four study areas and the locations of the childcare centres.\n\npar(mfrow=c(2,2), mai = c(0.2,0.2,0.2,0.2))\nplot(childcare_pg_ppp.km, main=\"Punggol\")\nplot(childcare_tm_ppp.km, main=\"Tampines\")\nplot(childcare_ck_ppp.km, main=\"Choa Chu Kang\")\nplot(childcare_jw_ppp.km, main=\"Jurong West\")"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#pre-school-location",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#pre-school-location",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "2.3 Pre-school Location",
+    "text": "2.3 Pre-school Location\nWe import the pre-school location in KML and Geojson format\nImport KML file\n\npreschool_kml = st_read(\"data/PreSchoolsLocation.kml\")\n\nReading layer `PRESCHOOLS_LOCATION' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data\\PreSchoolsLocation.kml' \n  using driver `KML'\nSimple feature collection with 2290 features and 2 fields\nGeometry type: POINT\nDimension:     XYZ\nBounding box:  xmin: 103.6878 ymin: 1.247759 xmax: 103.9897 ymax: 1.462134\nz_range:       zmin: 0 zmax: 0\nGeodetic CRS:  WGS 84\n\n\nImport Geojson file\n\npreschool_geojson &lt;- st_read(\"data/PreSchoolsLocation.geojson\") \n\nReading layer `PreSchoolsLocation' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex01\\data\\PreSchoolsLocation.geojson' \n  using driver `GeoJSON'\nSimple feature collection with 2290 features and 2 fields\nGeometry type: POINT\nDimension:     XYZ\nBounding box:  xmin: 103.6878 ymin: 1.247759 xmax: 103.9897 ymax: 1.462134\nz_range:       zmin: 0 zmax: 0\nGeodetic CRS:  WGS 84"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#point-in-polygon-count",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#point-in-polygon-count",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "4.1 Point-in-polygon count",
+    "text": "4.1 Point-in-polygon count\nThe number of pre-school in each planning subzone can be counted using below code chunk.\n\nmpsz19_shp &lt;- mpsz19_shp %&gt;%\n  mutate(`PreSch Count` = lengths(\n    st_intersects(mpsz19_shp, preschool)))"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#compute-density",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#compute-density",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "4.2 Compute Density",
+    "text": "4.2 Compute Density\nCalculate the area of each subzone and compute the density of pre-school per square kilometers in at planning subzone level.\n\nmpsz19_shp &lt;- mpsz19_shp %&gt;%\n  mutate(`Area` = units::drop_units(\n    st_area(.)),\n    `PreSch Density` = `PreSch Count` / Area * 1000000\n  )"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#data-wrangling",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#data-wrangling",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "6.1 Data Wrangling",
+    "text": "6.1 Data Wrangling\nThe below code chunk prepare a data.frame showing population by Planning Area and Planning subzone.\n\npopdata2023 &lt;- popdata %&gt;% \n  group_by(PA, SZ, AG) %&gt;% \n  summarise(`POP`=sum(`Pop`)) %&gt;%  \n  ungroup() %&gt;% \n  pivot_wider(names_from=AG,\n              values_from = POP)\n\n`summarise()` has grouped output by 'PA', 'SZ'. You can override using the\n`.groups` argument.\n\ncolnames(popdata2023)\n\n [1] \"PA\"          \"SZ\"          \"0_to_4\"      \"10_to_14\"    \"15_to_19\"   \n [6] \"20_to_24\"    \"25_to_29\"    \"30_to_34\"    \"35_to_39\"    \"40_to_44\"   \n[11] \"45_to_49\"    \"50_to_54\"    \"55_to_59\"    \"5_to_9\"      \"60_to_64\"   \n[16] \"65_to_69\"    \"70_to_74\"    \"75_to_79\"    \"80_to_84\"    \"85_to_89\"   \n[21] \"90_and_Over\""
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#data-processing",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#data-processing",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "6.2 Data Processing",
+    "text": "6.2 Data Processing\nThe below code chunk code chunk derives a tibble data.framewith the following fields PA, SZ, YOUNG, ECONOMY ACTIVE, AGED, TOTAL, DEPENDENCY whereby:\n\nYOUNG: age group 0 to 4 until age group 20 to 24,\nECONOMY ACTIVE: age group 25-29 until age group 60-64,\nAGED: age group 65 and above,\nTOTAL: all age group, and\nDEPENDENCY: the ratio between young and aged against economy active group.\n\n\npopdata2023 &lt;- popdata2023 %&gt;%\n  mutate(YOUNG=rowSums(.[3:6]) # Aged 0 - 24, 10 - 24\n         +rowSums(.[14])) %&gt;% # Aged 5 - 9\n  mutate(`ECONOMY ACTIVE` = rowSums(.[7:13])+ # Aged 25 - 59\n  rowSums(.[15])) %&gt;%  # Aged 60 -64\n  mutate(`AGED`=rowSums(.[16:21])) %&gt;%\n  mutate(`TOTAL`=rowSums(.[3:21])) %&gt;%\n  mutate(`DEPENDENCY`=(`YOUNG` + `AGED`)\n  / `ECONOMY ACTIVE`) %&gt;% \n  select(`PA`, `SZ`, `YOUNG`, \n         `ECONOMY ACTIVE`, `AGED`,\n         `TOTAL`, `DEPENDENCY`)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#join-the-population-data-and-master-planning-subzone-2019",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#join-the-population-data-and-master-planning-subzone-2019",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "6.3 Join the Population Data and Master Planning Subzone 2019",
+    "text": "6.3 Join the Population Data and Master Planning Subzone 2019\nBefore performing the georelational join, we convert the values in PA and SZ fields to uppercase, as the original values in these fields are made up of upper and lowercase, while SUBZONE_N and PLN_AREA_N values are in uppercase.\n\npopdata2023 &lt;- popdata2023 %&gt;%\n  mutate_at(.vars = vars(PA, SZ), \n          .funs = list(toupper)) \n\nNext, left_join() of dplyr is used to join the geographical data and attribute table using planning subzone name e.g. SUBZONE_N and SZ as the common identifier.\nUse mpsz19_shp as left table.\n\nmpsz_pop2023 &lt;- left_join(mpsz19_shp, popdata2023,\n                          by = c(\"SUBZONE_N\" = \"SZ\"))\n\nUse popdata2023 as left table.\n\npop2023_mpsz &lt;- left_join(popdata2023, mpsz19_shp, \n                          by = c(\"SZ\" = \"SUBZONE_N\"))"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#choropleth-map-of-dependency-ratio-by-planning-subzone",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#choropleth-map-of-dependency-ratio-by-planning-subzone",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "6.4 Choropleth Map of Dependency Ratio by Planning Subzone",
+    "text": "6.4 Choropleth Map of Dependency Ratio by Planning Subzone\n\ntm_shape(mpsz_pop2023)+\n  tm_fill(\"DEPENDENCY\", \n          style = \"quantile\", \n          palette = \"Blues\",\n          title = \"Dependency ratio\") +\n  tm_layout(main.title = \"Distribution of Dependency Ratio by planning subzone\",\n            main.title.position = \"center\",\n            main.title.size = 1.2,\n            legend.height = 0.45, \n            legend.width = 0.35,\n            frame = TRUE,\n            bg.color = \"bisque\") +\n  tm_borders(alpha = 0.5) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scale_bar() +\n  tm_grid(alpha =0.2) +\n  tm_credits(\"Source: Planning Sub-zone boundary from Urban Redevelopment Authorithy (URA)\\n and Population data from Department of Statistics DOS\",\n             position = c(\"left\", \"bottom\"))"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#percentile-map",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#percentile-map",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "6.5 Percentile Map",
+    "text": "6.5 Percentile Map\nA percentile map is a specific type of quantile map with six categories: 0-1%, 1-10%, 10-50%, 50-90%, 90-99%, and 99-100%. The breakpoints for these categories can be determined using the base R quantile() function, with a vector of cumulative probabilities specified as c(0, .01, .1, .5, .9, .99, 1). Ensure to include both the beginning and end points.\nFirst we exclude records with NA using below code chunk.\n\nmpsz_pop2023 &lt;- mpsz_pop2023 %&gt;%\n  drop_na()\n\nNext we define a function to get the input data and field to be used for creating the percentile map.\n\nget.var &lt;- function(vname,df) {\n  v &lt;- df[vname] %&gt;% \n    st_set_geometry(NULL)\n  v &lt;- unname(v[,1])\n  return(v)\n}\n\nThe code chunk below creates a function for computing and plotting the percentile map.\n\npercentmap &lt;- function(vnam, df, legtitle=NA, mtitle=\"Percentile Map\"){\n  percent &lt;- c(0,.01,.1,.5,.9,.99,1)\n  var &lt;- get.var(vnam, df)\n  bperc &lt;- quantile(var, percent)\n  tm_shape(mpsz_pop2023) +\n  tm_polygons() +\n  tm_shape(df) +\n     tm_fill(vnam,\n             title=legtitle,\n             breaks=bperc,\n             palette=\"Blues\",\n          labels=c(\"&lt; 1%\", \"1% - 10%\", \"10% - 50%\", \"50% - 90%\", \"90% - 99%\", \"&gt; 99%\"))  +\n  tm_borders() +\n  tm_layout(main.title = mtitle, \n            title.position = c(\"right\",\"bottom\"))\n}\n\nThe defined function is used to plot the percentile map.\n\npercentmap(\"DEPENDENCY\", mpsz_pop2023)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#box-map",
+    "href": "In-class_Ex/In-class_Ex01/In-class_Ex01.html#box-map",
+    "title": "In-class Exercise 1: Geospatial Data Science with R",
+    "section": "6.6 Box Map",
+    "text": "6.6 Box Map\nA box map is an enhanced quartile map that includes additional lower and upper categories. If there are lower outliers, the breaks start with the minimum value, followed by the lower fence. If there are no lower outliers, the breaks start at the lower fence, with the second break at the minimum value. In this case, no observations will fall between the lower fence and the minimum value.\nFirst we define below function to create break points for a box map.\nArguments:\n\nv: vector with observations\nmult: multiplier for IQR (default 1.5)\n\nOutput:\n\nbb: vector with 7 break points computed quartile and fences\n\n\nboxbreaks &lt;- function(v,mult=1.5) {\n  qv &lt;- unname(quantile(v))\n  iqr &lt;- qv[4] - qv[2]\n  upfence &lt;- qv[4] + mult * iqr\n  lofence &lt;- qv[2] - mult * iqr\n  # initialize break points vector\n  bb &lt;- vector(mode=\"numeric\",length=7)\n  # logic for lower and upper fences\n  if (lofence &lt; qv[1]) {  # no lower outliers\n    bb[1] &lt;- lofence\n    bb[2] &lt;- floor(qv[1])\n  } else {\n    bb[2] &lt;- lofence\n    bb[1] &lt;- qv[1]\n  }\n  if (upfence &gt; qv[5]) { # no upper outliers\n    bb[7] &lt;- upfence\n    bb[6] &lt;- ceiling(qv[5])\n  } else {\n    bb[6] &lt;- upfence\n    bb[7] &lt;- qv[5]\n  }\n  bb[3:5] &lt;- qv[2:4]\n  return(bb)\n}\n\nNext get.var function is defined to extract a variable as a vector out of an sf data frame.\nArguments:\n\nvname: variable name (as character, in quotes)\ndf: name of sf data frame\n\nReturns:\n\nv: vector with values (without a column name)\n\n\nget.var &lt;- function(vname,df) {\n  v &lt;- df[vname] %&gt;% st_set_geometry(NULL)\n  v &lt;- unname(v[,1])\n  return(v)\n}\n\nFinally, the boxmap function is defined to create a box map.\nArguments:\n\nvnam: variable name (as character, in quotes)\ndf: simple features polygon layer\nlegtitle: legend title\nmtitle: map title\nmult: multiplier for IQR\n\nReturns:\n\na tmap-element (plots a map)\n\n\nboxmap &lt;- function(vnam, df, \n                   legtitle=NA,\n                   mtitle=\"Box Map\",\n                   mult=1.5){\n  var &lt;- get.var(vnam,df)\n  bb &lt;- boxbreaks(var)\n  tm_shape(df) +\n    tm_polygons() +\n  tm_shape(df) +\n     tm_fill(vnam,title=legtitle,\n             breaks=bb,\n             palette=\"Blues\",\n          labels = c(\"lower outlier\", \n                     \"&lt; 25%\", \n                     \"25% - 50%\", \n                     \"50% - 75%\",\n                     \"&gt; 75%\", \n                     \"upper outlier\"))  +\n  tm_borders() +\n  tm_layout(main.title = mtitle, \n            title.position = c(\"left\",\n                               \"top\"))\n}\n\nPlotting a box map on DEPENDENCY.\n\nboxmap(\"DEPENDENCY\", mpsz_pop2023)\n\n\n\n\n\n\n\n\nPlot the box map in view mode\n\ntmap_options(check.and.fix = TRUE)\ntmap_mode(\"view\")\n\ntmap mode set to interactive viewing\n\nboxmap(\"DEPENDENCY\", mpsz_pop2023)\n\nWarning: The shape df is invalid (after reprojection). See sf::st_is_valid\nWarning: The shape df is invalid (after reprojection). See sf::st_is_valid\n\n\n\n\n\n\n\ntmap_mode(\"plot\")\n\ntmap mode set to plotting"
   }
 ]
