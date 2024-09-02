@@ -17,16 +17,17 @@ website:
           href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex022.html"
       - text: "In-class Exercise"
         menu: 
-        - text: "Exercise 1"
+        - text: "1 - Geospatial Data Analysis with R"
           href: In-class_Ex/In-class_Ex01/In-class_Ex01.html
       - text: "Take-home Exercise"
         menu: 
-        - text: " Exercise 1"
+        - text: "Exercise 1"
           href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html"
     right:
       - href: index.qmd
         text: Home
-      - about.qmd
+      - text: "{{< iconify fa6-brands linkedin size=2xl >}}"
+        href: 'https://www.linkedin.com/in/nguyenbaothuphuong/'
 
 format:
   html:
