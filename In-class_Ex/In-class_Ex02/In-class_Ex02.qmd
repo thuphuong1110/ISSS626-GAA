@@ -1,0 +1,96 @@
+---
+title: "In-class Exercise 2"
+author: "Nguyen Bao Thu Phuong"
+date: "2 September 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Install R packages
+
+Install retired maptools package from [Posit Public Package Manager](https://packagemanager.posit.co/client/#/)
+
+```{r}
+#| eval: false
+install.packages("maptools", repos = "https://packagemanager.posit.co/cran/2023-10-13")
+```
+Import other R packages.
+```{r}
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
+```
+
+# Create Coastal Outline
+
+While sp packages only allow for storing objects as is, sf packages provides other methods to manipulate geospatial data as well.
+
+We use st_union() from sf package to create the coastal outline sf tibble data frame and plot the result as below
+```{r}
+# Read in Master Plan 2014 Subzone Boundary
+mpsz_sf <- st_read(dsn = "data", 
+                layer = "MP14_SUBZONE_WEB_PL")
+# Create Coastal outline
+sg_sf = mpsz_sf %>%
+  st_union()
+plot(sg_sf)
+```
+
+# Import Geospatial Data
+
+First we read in the data and perform data transformation.
+
+```{r}
+childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>%
+  st_transform(crs = 3414)
+childcare_ppp <- as.ppp(childcare_sf)
+sg_owin <- as.owin(sg_sf)
+childcareSG_ppp = childcare_ppp[sg_owin]
+childcareSG_ppp.km <- rescale.ppp(childcareSG_ppp, 1000, "km")
+```
+
+Next derive adaptive kernel density estimation using the *adaptive.density()* function from spatstat.
+
+```{r}
+kde_childcareSG_adaptive <- adaptive.density(childcareSG_ppp.km, method="kernel")
+```
+
+
+# Convert to ppp object
+
+For sf objects, *as.ppp()* and *as.owin()* from **spatstat.geom** can be used, whereas *ppp()* and *owin()* is to be used for sp objects.
+
+# Kernel Density Estimation
+
+Function from maptools can be used as in below code chunk given maptools was installed.
+
+```{r}
+gridded_kde_childcareSG_ad <- maptools::as.SpatialGridDataFrame.im(kde_childcareSG_adaptive)
+spplot(gridded_kde_childcareSG_ad)
+```
+
+The appropriate way is to using spatstat.geom method as in below code chunk.
+
+```{r}
+gridded_kde_childcareSG_ad <- as(kde_childcareSG_adaptive,"SpatialGridDataFrame")
+spplot(gridded_kde_childcareSG_ad)
+```
+
+# Monte Carlo Simulation
+
+First we set the seed to ensure reproducibility when running Monte Carlo simulation.
+```{r}
+set.seed(1234)
+```
+
+# Edge correction methods of spatstat
+
+Edge correction methods are used to handle bias when estimating spatial statistics near the boundaries of the study region. For example, if we are looking at specific study areas with in the region (Singapore boundary in this case). If the study is to be done for the whole Singapore, then edge correction is not needed.
+
+As edge correction increase computation time, the argument can be set to `none` when edge correction is not needed.
+
+
+
+
