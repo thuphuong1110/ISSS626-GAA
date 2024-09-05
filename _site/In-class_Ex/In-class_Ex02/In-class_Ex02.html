@@ -202,8 +202,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#install-r-packages" id="toc-install-r-packages" class="nav-link active" data-scroll-target="#install-r-packages"><span class="header-section-number">1</span> Install R packages</a></li>
   <li><a href="#create-coastal-outline" id="toc-create-coastal-outline" class="nav-link" data-scroll-target="#create-coastal-outline"><span class="header-section-number">2</span> Create Coastal Outline</a></li>
-  <li><a href="#import-geospatial-data" id="toc-import-geospatial-data" class="nav-link" data-scroll-target="#import-geospatial-data"><span class="header-section-number">3</span> Import Geospatial Data</a></li>
-  <li><a href="#convert-to-ppp-object" id="toc-convert-to-ppp-object" class="nav-link" data-scroll-target="#convert-to-ppp-object"><span class="header-section-number">4</span> Convert to ppp object</a></li>
+  <li><a href="#import-geospatial-data-convert-to-ppp-object" id="toc-import-geospatial-data-convert-to-ppp-object" class="nav-link" data-scroll-target="#import-geospatial-data-convert-to-ppp-object"><span class="header-section-number">3</span> Import Geospatial Data &amp; Convert to ppp object</a></li>
+  <li><a href="#inspect-ppp-object" id="toc-inspect-ppp-object" class="nav-link" data-scroll-target="#inspect-ppp-object"><span class="header-section-number">4</span> Inspect ppp object</a></li>
   <li><a href="#kernel-density-estimation" id="toc-kernel-density-estimation" class="nav-link" data-scroll-target="#kernel-density-estimation"><span class="header-section-number">5</span> Kernel Density Estimation</a></li>
   <li><a href="#monte-carlo-simulation" id="toc-monte-carlo-simulation" class="nav-link" data-scroll-target="#monte-carlo-simulation"><span class="header-section-number">6</span> Monte Carlo Simulation</a></li>
   <li><a href="#edge-correction-methods-of-spatstat" id="toc-edge-correction-methods-of-spatstat" class="nav-link" data-scroll-target="#edge-correction-methods-of-spatstat"><span class="header-section-number">7</span> Edge correction methods of spatstat</a></li>
@@ -239,7 +239,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Modified</div>
     <div class="quarto-title-meta-contents">
-      <p class="date-modified">September 2, 2024</p>
+      <p class="date-modified">September 3, 2024</p>
     </div>
   </div>
     
@@ -292,9 +292,9 @@ Projected CRS: SVY21</code></pre>
 </div>
 </div>
 </section>
-<section id="import-geospatial-data" class="level1" data-number="3">
-<h1 data-number="3"><span class="header-section-number">3</span> Import Geospatial Data</h1>
-<p>First we read in the data and perform data transformation.</p>
+<section id="import-geospatial-data-convert-to-ppp-object" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Import Geospatial Data &amp; Convert to ppp object</h1>
+<p>First we read in the data and perform data transformation. For sf objects, <em>as.ppp()</em> and <em>as.owin()</em> from <strong>spatstat.geom</strong> can be used, whereas <em>ppp()</em> and <em>owin()</em> is to be used for sp objects.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>childcare_sf <span class="ot">&lt;-</span> <span class="fu">st_read</span>(<span class="st">"data/child-care-services-geojson.geojson"</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">st_transform</span>(<span class="at">crs =</span> <span class="dv">3414</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -323,23 +323,18 @@ marks</code></pre>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>kde_childcareSG_adaptive <span class="ot">&lt;-</span> <span class="fu">adaptive.density</span>(childcareSG_ppp.km, <span class="at">method=</span><span class="st">"kernel"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="convert-to-ppp-object" class="level1" data-number="4">
-<h1 data-number="4"><span class="header-section-number">4</span> Convert to ppp object</h1>
-<p>For sf objects, <em>as.ppp()</em> and <em>as.owin()</em> from <strong>spatstat.geom</strong> can be used, whereas <em>ppp()</em> and <em>owin()</em> is to be used for sp objects.</p>
-</section>
-<section id="kernel-density-estimation" class="level1" data-number="5">
-<h1 data-number="5"><span class="header-section-number">5</span> Kernel Density Estimation</h1>
-<p>Function from maptools can be used as in below code chunk given maptools was installed.</p>
+<section id="inspect-ppp-object" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Inspect ppp object</h1>
+<p>We plot the <code>childcare_ppp</code> object using below code chunk</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>gridded_kde_childcareSG_ad <span class="ot">&lt;-</span> maptools<span class="sc">::</span><span class="fu">as.SpatialGridDataFrame.im</span>(kde_childcareSG_adaptive)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(childcare_ppp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Please note that 'maptools' will be retired during October 2023,
-plan transition at your earliest convenience (see
-https://r-spatial.org/r/2023/05/15/evolution4.html and earlier blogs
-for guidance);some functionality will be moved to 'sp'.
- Checking rgeos availability: FALSE</code></pre>
+<pre><code>Warning in default.charmap(ntypes, chars): Too many types to display every type
+as a different character</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(gridded_kde_childcareSG_ad)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Only 10 out of 1545 symbols are shown in the symbol map</code></pre>
+</div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -348,14 +343,36 @@ for guidance);some functionality will be moved to 'sp'.
 </div>
 </div>
 </div>
-<p>The appropriate way is to using spatstat.geom method as in below code chunk.</p>
+</section>
+<section id="kernel-density-estimation" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Kernel Density Estimation</h1>
+<p>Function from maptools can be used as in below code chunk given maptools was installed.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>gridded_kde_childcareSG_ad <span class="ot">&lt;-</span> <span class="fu">as</span>(kde_childcareSG_adaptive,<span class="st">"SpatialGridDataFrame"</span>)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(gridded_kde_childcareSG_ad)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>gridded_kde_childcareSG_ad <span class="ot">&lt;-</span> maptools<span class="sc">::</span><span class="fu">as.SpatialGridDataFrame.im</span>(kde_childcareSG_adaptive)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Please note that 'maptools' will be retired during October 2023,
+plan transition at your earliest convenience (see
+https://r-spatial.org/r/2023/05/15/evolution4.html and earlier blogs
+for guidance);some functionality will be moved to 'sp'.
+ Checking rgeos availability: FALSE</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(gridded_kde_childcareSG_ad)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
 <p><img src="In-class_Ex02_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The appropriate way is to using spatstat.geom method as in below code chunk.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>gridded_kde_childcareSG_ad <span class="ot">&lt;-</span> <span class="fu">as</span>(kde_childcareSG_adaptive,<span class="st">"SpatialGridDataFrame"</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(gridded_kde_childcareSG_ad)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="In-class_Ex02_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -365,7 +382,7 @@ for guidance);some functionality will be moved to 'sp'.
 <h1 data-number="6"><span class="header-section-number">6</span> Monte Carlo Simulation</h1>
 <p>First we set the seed to ensure reproducibility when running Monte Carlo simulation.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="edge-correction-methods-of-spatstat" class="level1" data-number="7">

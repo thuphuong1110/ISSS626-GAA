@@ -18,7 +18,9 @@ Install retired maptools package from [Posit Public Package Manager](https://pac
 #| eval: false
 install.packages("maptools", repos = "https://packagemanager.posit.co/cran/2023-10-13")
 ```
+
 Import other R packages.
+
 ```{r}
 pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
 ```
@@ -28,6 +30,7 @@ pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
 While sp packages only allow for storing objects as is, sf packages provides other methods to manipulate geospatial data as well.
 
 We use st_union() from sf package to create the coastal outline sf tibble data frame and plot the result as below
+
 ```{r}
 # Read in Master Plan 2014 Subzone Boundary
 mpsz_sf <- st_read(dsn = "data", 
@@ -38,9 +41,9 @@ sg_sf = mpsz_sf %>%
 plot(sg_sf)
 ```
 
-# Import Geospatial Data
+# Import Geospatial Data & Convert to ppp object
 
-First we read in the data and perform data transformation.
+First we read in the data and perform data transformation. For sf objects, *as.ppp()* and *as.owin()* from **spatstat.geom** can be used, whereas *ppp()* and *owin()* is to be used for sp objects.
 
 ```{r}
 childcare_sf <- st_read("data/child-care-services-geojson.geojson") %>%
@@ -57,10 +60,12 @@ Next derive adaptive kernel density estimation using the *adaptive.density()* fu
 kde_childcareSG_adaptive <- adaptive.density(childcareSG_ppp.km, method="kernel")
 ```
 
+# Inspect ppp object
 
-# Convert to ppp object
-
-For sf objects, *as.ppp()* and *as.owin()* from **spatstat.geom** can be used, whereas *ppp()* and *owin()* is to be used for sp objects.
+We plot the `childcare_ppp` object using below code chunk
+```{r}
+plot(childcare_ppp)
+```
 
 # Kernel Density Estimation
 
@@ -81,6 +86,7 @@ spplot(gridded_kde_childcareSG_ad)
 # Monte Carlo Simulation
 
 First we set the seed to ensure reproducibility when running Monte Carlo simulation.
+
 ```{r}
 set.seed(1234)
 ```
@@ -90,7 +96,3 @@ set.seed(1234)
 Edge correction methods are used to handle bias when estimating spatial statistics near the boundaries of the study region. For example, if we are looking at specific study areas with in the region (Singapore boundary in this case). If the study is to be done for the whole Singapore, then edge correction is not needed.
 
 As edge correction increase computation time, the argument can be set to `none` when edge correction is not needed.
-
-
-
-
