@@ -1,20 +1,31 @@
 ---
-title: "Take-home Exercise 1"
+title: "Take-home Exercise 1: Geospatial Analytics for Public Good"
 author: "Nguyen Bao Thu Phuong"
+date: "3 September 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
 ---
 
 # Import R packages
 
 ```{r}
-pacman::p_load(sf, raster, spatstat, tmap, tidyverse)
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse, spNetwork)
 ```
 
 # Import Traffic Accident Data
 
 ```{r}
-rdacc_sf = read_csv("data/thai_road_accident_2019_2022.csv") %>%
+rdacc_sf = read_csv("data/rawdata/thai_road_accident_2019_2022.csv") %>%
   filter(!is.na(longitude) & longitude != "",
          !is.na(latitude) & latitude != "") %>%
+  mutate(month_no = month(incident_datetime)) %>%
+  mutate(month_fac = month(incident_datetime,
+                       label = TRUE, abbr = TRUE)) %>%
+  mutate(dayofweek = day(incident_datetime)) %>%
   st_as_sf(coords = c("longitude", "latitude"),
            crs = 4326) %>%
   st_transform(crs = 32647)

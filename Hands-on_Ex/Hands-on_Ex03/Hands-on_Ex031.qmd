@@ -114,7 +114,7 @@ lixels <- lixelize_lines(network,
 
 The followings are observed from the above code chunk.
 
--   The length of each lixel (*lx_length*) is set to 700 meters.
+-   The length of each lixel (*lx_length*) is set to 700 meters. This is a reasonable walking distance for parents/grandparents to walk their kids to the childcare centre. 
 
 -   The minimum length of a lixel (*mindist*) is set to 375 meters.
 
