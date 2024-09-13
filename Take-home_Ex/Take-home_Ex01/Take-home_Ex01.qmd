@@ -16,10 +16,14 @@ execute:
 pacman::p_load(sf, raster, spatstat, tmap, tidyverse, spNetwork)
 ```
 
-# Import Traffic Accident Data
+# Import Geospatial Data
+
+## Traffic Accident
 
 ```{r}
+#| eval: false
 rdacc_sf = read_csv("data/rawdata/thai_road_accident_2019_2022.csv") %>%
+  select(-c("province_th", "route")) %>% # remove columns in Thai language
   filter(!is.na(longitude) & longitude != "",
          !is.na(latitude) & latitude != "") %>%
   mutate(month_no = month(incident_datetime)) %>%
@@ -30,3 +34,161 @@ rdacc_sf = read_csv("data/rawdata/thai_road_accident_2019_2022.csv") %>%
            crs = 4326) %>%
   st_transform(crs = 32647)
 ```
+
+Write to rds format.
+
+```{r}
+#| eval: false
+write_rds(rdacc_sf, "data/rds/acc.rds")
+```
+
+Read from rds file and filter for accident in Bangkok Metropolitan Region
+
+```{r}
+bmr_acc = read_rds("data/rds/acc.rds") %>%
+  filter(province_en %in% c("Bangkok","Nakhon Pathom", "Pathum Thani","Nonthaburi", "Samut Prakan", "Samut Sakhon"))
+```
+
+Visualize `vehicle_type` recorded.
+
+```{r}
+ggplot(data = bmr_acc, aes(x = fct_infreq(vehicle_type))) +
+  geom_bar(fill = "skyblue", color = "black") +  # Bar plot with colored bars
+  labs(title = "Frequency of Different Vehicle Types", 
+       x = "Vehicle Type", 
+       y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
+```
+
+Below chart shows that majority of the accident were caused by motor vehicles, only 0.39 % were caused by bicycle, pedestrian, motorized tricycle and agricultural vehicle as calculated below.
+
+For the scope of this analysis, we will focus on motor vehicles related accident and road types that allow motor vehicles access only.
+
+```{r}
+# Filter the records where vehicle_type is either 'pedestrian' or 'bicycle'
+subset_vehicle <- bmr_acc[bmr_acc$vehicle_type %in% c("pedestrian", "bicycle","motorized tricycle","tractor/agricultural vehicle"), ]
+
+# Calculate the percentage & print the result
+percentage <- (nrow(subset_vehicle) / nrow(bmr_acc)) * 100
+print(paste("Percentage of pedestrian and bicycle records:", round(percentage, 2), "%"))
+
+```
+
+## Thailand Subnational Administrative Boundaries
+
+Import administrative boundaries at province level and filter for Bangkok Metropolitan Region.
+
+```{r}
+#| eval: false
+bmr_prov = st_read(dsn = "data/rawdata",layer = "tha_admbnda_adm1_rtsd_20220121") %>%
+  filter(ADM1_EN %in% c("Bangkok","Nakhon Pathom", "Pathum Thani","Nonthaburi", "Samut Prakan", "Samut Sakhon"))
+
+```
+
+Write to rds file
+
+```{r}
+#| eval: false
+write_rds(bmr_prov, "data/rds/bmr_prov.rds")
+```
+
+Read from rds file.
+
+```{r}
+bmr_prov = read_rds("data/rds/bmr_prov.rds")
+```
+
+Reproject to Thailand projected coordinate system
+
+```{r}
+bmr_boundary = st_transform(bmr_prov, crs = 32647)
+```
+
+Plot the boundaries.
+
+```{r}
+plot(st_geometry(bmr_prov))
+```
+
+## Thailand Bangkok Metropolitan Region Road
+
+Read in raw data export from OpenStreetMap, as the original datataset CRS is NA, we use st_set_crs() to assign the EPSG 4326 (assume the data is in WGS84 coordinate system). Next we filter for roads inside Bangkok Metropolitan Region boundary only.
+
+```{r}
+#| eval: false
+bmr_road = st_read(dsn = "data/rawdata",layer = "hotosm_tha_roads_lines_shp") %>%
+  st_set_crs(4326) %>%
+  st_intersection(bmr_prov)
+```
+
+Write the roads inside Bangkok Metropolitan Region in WGS84 into rds file.
+
+```{r}
+#| eval: false
+write_rds(bmr_road, "data/rds/bmr_road.rds")
+```
+
+As the OSM data include exhaustive road types (under column `highway`), we will filter for road types that allow motor vehicles access only. According to [WikiProject Thailand](https://wiki.openstreetmap.org/wiki/WikiProject_Thailand#Highway_classification), we filter for the below `highway` classification where motorcycle and car can access. Read from rds file, filter for relevant road types and reproject to Thailand Projected CRS (EPSG = 32647) .
+
+```{r}
+#| eval: false
+bmr_road_ft = read_rds("data/rds/bmr_road.rds") %>%
+  filter(highway %in% c("motorway", "motorway_link", "trunk","trunk_link","primary","primary_link","secondary","secondary_link","tertiary","tertiary_link", "unclassified","living_street", "road", "residential")) %>%
+  st_transform(crs = 32647)
+```
+
+Write the transformed road data to rds file
+
+```{r}
+#| eval: false
+write_rds(bmr_road_ft, "data/rds/network.rds")
+```
+
+Read from rds file
+
+```{r}
+network = read_rds("data/rds/network.rds")
+```
+
+Plot the road network
+
+```{r}
+tmap_mode("plot")
+tm_shape(network) +
+  tm_lines()
+```
+
+The network is still too dense to be observable. The frequency of different `highway` classification is plotted as below for further investigation.
+
+```{r}
+ggplot(data = network, aes(x = fct_infreq(highway))) +
+  geom_bar(fill = "skyblue", color = "black") +  # Bar plot with colored bars
+  labs(title = "Frequency of Different Highway Classes", 
+       x = "Highway Class", 
+       y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
+```
+
+It can be seen that `residential` class takes up the majority number of records. As defined in [WikiProject Thailand](https://wiki.openstreetmap.org/wiki/WikiProject_Thailand#Highway_classification), `residential` class includes roads "within a residential area that gives the public access to one or multiple residences. Also used for roads within a gated housing estate (add access=private). Residential roads are typically short in length and often named." As these roads are inside residential area and usually short, we assume the number of traffic accidents happen on this type of road is small.
+
+We exclude `highway=residential` from the `network` sf object
+
+```{r}
+network = filter(network, ! highway %in% c("residential"))
+```
+
+Plot the map of Traffic accident in Bangkok Metropolitan Region with overlaying road network.
+
+```{r}
+tm_shape(bmr_prov) + 
+  tm_polygons() +
+  tm_shape(bmr_acc) +
+  tm_dots(col = "red") +
+  tm_shape(network) +
+  tm_lines()
+
+```
+
+It can be seen from the above map most of the accidents points already lie on the network, although there are a few points still lying off the network, the number is minimal. We proceed with this `network` dataset for further analysis.

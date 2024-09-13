@@ -17,6 +17,8 @@ website:
           href: "Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex022.html"
         - text: "3.1 - Network Constrained Spatial Point Patterns Analysis"
           href: "Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex031.html"
+        - text: "4.1 - Spatial Weights and Applications"
+          href: "Hands-on_Ex/Hands-on_Ex04/Hands-on_Ex041.html"
       - text: "In-class Exercise"
         menu: 
         - text: "1 - Geospatial Data Analysis with R"
@@ -28,7 +30,7 @@ website:
       - text: "Take-home Exercise"
         menu: 
         - text: "1 - Geospatial Analytics for Public Good"
-          href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html"
+          href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex00.html"
     right:
       - href: index.qmd
         text: Home
