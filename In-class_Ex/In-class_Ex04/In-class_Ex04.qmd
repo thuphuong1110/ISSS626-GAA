@@ -1,0 +1,185 @@
+---
+title: "In-class Exercise 4: Geographically Weighted Summary Statistics - GWmodel"
+author: "Nguyen Bao Thu Phuong"
+date: "16 September 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Import R package
+
+Import the relevant R package
+
+```{r}
+pacman::p_load(GWmodel, sf, spdep, tmap, tidyverse, knitr, ggstatsplot)
+```
+
+# Prepare the data
+
+We load in the hunan shapefile and hunan_2012 data file
+
+## Hunan Shapefile
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+```
+
+## Hunan 2012 Data
+
+```{r}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+## Join Hunan and Hunan 2012 data
+
+The following code chunk uses *left_join()* from the dplyr package to update the attribute table of `hunan`’s SpatialPolygonsDataFrame by merging it with the attribute fields from the `hunan2012` dataframe.
+
+```{r}
+hunan_sf <- left_join(hunan,hunan2012, by = "County" ) %>%
+  select(1:3, 7, 15, 16, 31, 32)
+```
+
+# Convert to SpatialPolygonDataFrame
+
+GWmodel is built on sp object. Hence we need to convert the sf object into sp object. In sp object, a list object is used to store the polygon coordinates.
+
+```{r}
+hunan_sp = as_Spatial(hunan_sf)
+```
+
+# Geographically Weighted summary statistics with adaptive bandwidth
+
+## Determine adaptive bandwidth
+
+### Cross-validation
+
+Cross validation of different bandwidth values is calculated using below code chunk, using approach = CV, longlat = T (to indicate the use of coordinates in degree)
+
+```{r}
+bw_CV = bw.gwr(GDPPC ~ 1, 
+               data = hunan_sp,
+               approach = "CV",
+               adaptive = TRUE,
+               kernel = "bisquare",
+               longlat = T)
+```
+
+```{r}
+bw_CV
+```
+
+### AIC
+
+```{r}
+bw_AIC = bw.gwr(GDPPC ~ 1, 
+               data = hunan_sp,
+               approach = "AIC",
+               adaptive = TRUE,
+               kernel = "bisquare",
+               longlat = T)
+```
+
+```{r}
+bw_AIC
+```
+
+## Determine fixed bandwidth
+
+### Cross Validation
+
+```{r}
+bw_CV = bw.gwr(GDPPC ~ 1, 
+               data = hunan_sp,
+               approach = "CV",
+               adaptive = FALSE,
+               kernel = "bisquare",
+               longlat = T)
+```
+
+```{r}
+bw_CV
+```
+
+### AIC
+
+```{r}
+bw_AIC = bw.gwr(GDPPC ~ 1, 
+               data = hunan_sp,
+               approach = "AIC",
+               adaptive = FALSE,
+               kernel = "bisquare",
+               longlat = T)
+```
+
+```{r}
+bw_AIC
+```
+
+## Compute geographically weighted summary statistics
+
+```{r}
+gwstat = gwss(data = hunan_sp,
+              vars = "GDPPC",
+              bw = bw_AIC,
+              kernel = "bisquare",
+              adaptive = TRUE,
+              longlat = T)
+```
+
+Taking a look at the `gwstat` gwss object:
+
+-   GDPPC_LM: the local means of 22 neighbours calculated for all the points
+
+-   GDPPC_LVar: the local variance of 22 neighbours calculated for all the points
+
+## Prepare the output data
+
+The code chunk below is used to extract `SDF` data table from gwss object (output from `gwss()`). It is converted into data.frame using `as.data.frame()`.
+
+```{r}
+gwstat_df = as.data.frame(gwstat$SDF)
+```
+
+Next `cbind()` is used to append the newly derived data.frame onto `hunan_sf` sf data frame.
+
+```{r}
+hunan_gstat = cbind(hunan_sf, gwstat_df)
+```
+
+# Visualize geographically weighted summary statistics
+
+We plot the distribution of geographically weighted mean.
+
+```{r}
+tm_shape(hunan_gstat) +
+  tm_fill("GDPPC_LM",
+          n = 5,
+          style = "quantile") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "Distribution of Geographically Weighted Mean",
+            main.title.position = "center",
+            main.title.size = 1.0,
+            legend.text.size = 0.5,
+            legend.height = 0.5,
+            legend.width = 1,
+            frame = TRUE)
+```
+
+The below chart can be used to answer the business question: Is there any relationship between GDP per capita and Gross Industry Output?
+
+```{r}
+
+```
+
+# Visualize Local Correlation
+
+```{r}
+
+```
+
+We can observe there are areas with correlation values lower than the global correlation as observed in the statistical chart above.

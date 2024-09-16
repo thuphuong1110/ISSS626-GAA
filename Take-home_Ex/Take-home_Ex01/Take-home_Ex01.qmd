@@ -16,9 +16,19 @@ execute:
 pacman::p_load(sf, raster, spatstat, tmap, tidyverse, spNetwork)
 ```
 
-# Import Geospatial Data
+Set the seed to ensure reproducibility of further analysis
 
-## Traffic Accident
+```{r}
+set.seed(2024)
+```
+
+# The Data
+
+# Spatial Data Wrangling
+
+## Data Import and Preparation
+
+### Traffic Accident
 
 ```{r}
 #| eval: false
@@ -30,6 +40,7 @@ rdacc_sf = read_csv("data/rawdata/thai_road_accident_2019_2022.csv") %>%
   mutate(month_fac = month(incident_datetime,
                        label = TRUE, abbr = TRUE)) %>%
   mutate(dayofweek = day(incident_datetime)) %>%
+  mutate(year = year(incident_datetime)) %>%
   st_as_sf(coords = c("longitude", "latitude"),
            crs = 4326) %>%
   st_transform(crs = 32647)
@@ -47,6 +58,23 @@ Read from rds file and filter for accident in Bangkok Metropolitan Region
 ```{r}
 bmr_acc = read_rds("data/rds/acc.rds") %>%
   filter(province_en %in% c("Bangkok","Nakhon Pathom", "Pathum Thani","Nonthaburi", "Samut Prakan", "Samut Sakhon"))
+```
+
+Check the content and CRS of the simple features object. We can see:
+
+-   The event object `bmr_acc` is already in POINT geometry type with dimension XY, which is as requried for further Network KDE (NKDE) analysis.
+
+-   CRS is set to EPSG 32647 - Bangkok Metropolitan Region Projected CRS.
+
+```{r}
+bmr_acc
+st_crs(bmr_acc)
+```
+
+Check if the data contains any duplicated accident records.
+
+```{r}
+anyDuplicated(bmr_acc)
 ```
 
 Visualize `vehicle_type` recorded.
@@ -75,7 +103,7 @@ print(paste("Percentage of pedestrian and bicycle records:", round(percentage, 2
 
 ```
 
-## Thailand Subnational Administrative Boundaries
+### Thailand Subnational Administrative Boundaries
 
 Import administrative boundaries at province level and filter for Bangkok Metropolitan Region.
 
@@ -105,13 +133,24 @@ Reproject to Thailand projected coordinate system
 bmr_boundary = st_transform(bmr_prov, crs = 32647)
 ```
 
+Check the content and CRS of the simple features object. We can see:
+
+-   The event object `bmr_boundary` is in POLYGON geometry type with dimension XY, which is as expected for boundary object.
+
+-   CRS is set to EPSG 32647 - Bangkok Metropolitan Region Projected CRS.
+
+```{r}
+bmr_boundary
+st_crs(bmr_boundary)
+```
+
 Plot the boundaries.
 
 ```{r}
-plot(st_geometry(bmr_prov))
+plot(st_geometry(bmr_boundary))
 ```
 
-## Thailand Bangkok Metropolitan Region Road
+### Thailand Bangkok Metropolitan Region Road
 
 Read in raw data export from OpenStreetMap, as the original datataset CRS is NA, we use st_set_crs() to assign the EPSG 4326 (assume the data is in WGS84 coordinate system). Next we filter for roads inside Bangkok Metropolitan Region boundary only.
 
@@ -179,10 +218,157 @@ We exclude `highway=residential` from the `network` sf object
 network = filter(network, ! highway %in% c("residential"))
 ```
 
+Check the content and CRS of the simple features object. We can see:
+
+-   The network object `network` is in GEOMETRY geometry type with dimension XY, while Network KDE (NKDE) analysis require LINESTRING geometry type.
+
+-   CRS is set to EPSG 32647 - Bangkok Metropolitan Region Projected CRS.
+
+```{r}
+network
+st_crs(network)
+```
+
+Convert the geometry type to LINESTRING using below code chunk
+
+```{r}
+#| warning: false
+network = st_cast(network, "LINESTRING")
+```
+
+Check if data contains any duplicated record.
+
+```{r}
+anyDuplicated(network)
+```
+
+## Data Wrangling
+
+Road traffic accidents are generally caused by two main factors: **behavioral** and **environmental**. Behavioral factors, which are often the primary cause, can be divided into driver behavior (driving style) and driver performance (driving skills) (Elander, West, & French, 1993). Environmental factors include conditions like poor visibility due to weather (e.g., heavy rain or fog) and hazardous road features such as sharp bends, slippery slopes, or blind spots.
+
+In this section, we will map the details provided in `bmr_acc` to those main factors.
+
+## Traffic Accident Presumed Cause
+
+First we check the distribution of accident presume causes.
+
+```{r}
+cause_counts <- bmr_acc %>%
+  group_by(presumed_cause) %>%
+  summarise(count = n())
+cause_counts
+```
+
+As there are many causes with a small counts, we map all these causes with records count smaller than or equal to 50 to `other cause` for avoid crowding the visualization with too many unique values later.
+
+```{r}
+# Identify causes with less than 50 records
+rare_causes <- cause_counts %>%
+  filter(count <= 50) %>%
+  pull(presumed_cause)
+
+# Map those rare causes to "other cause"
+bmr_acc <- bmr_acc %>%
+  mutate(presumed_cause_rd = ifelse(presumed_cause %in% rare_causes, "other cause", presumed_cause))
+```
+
+Check the cause count again.
+
+```{r}
+cause_counts_rd <- bmr_acc %>%
+  group_by(presumed_cause_rd) %>%
+  summarise(count = n())
+cause_counts_rd
+```
+
+The rare causes are mapped to `other cause` already.
+
+## Weather Condition of Accident
+
+```{r}
+weather_counts <- bmr_acc %>%
+  group_by(weather_condition) %>%
+  summarise(count = n())
+weather_counts
+```
+
+We can see that 90% of accidents (11,711/12,986) happened under `clear` weather and 7.7% happened under `rainy` weather. This signifies majority of road accidents in BMR were not due to weather related reason.
+
+As other weather condition has relative small counts, we map all these conditions to `other condition` for avoid crowding the visualization with too many unique values later.
+
+```{r}
+# Identify causes with less than 50 records
+weather_other <- c("dark", "foggy", "land slide", "natural disaster", "other")
+
+# Map those rare causes to "other cause"
+bmr_acc <- bmr_acc %>%
+  mutate(weather_rd = ifelse(weather_condition %in% weather_other, "other condition", weather_condition))
+
+# Check the count again
+weather_counts_rd <- bmr_acc %>%
+  group_by(weather_rd) %>%
+  summarise(count = n())
+weather_counts_rd
+```
+
+## Road and Slope Condition of Accident
+
+```{r}
+# Count the occurrences of each road and slop description combination
+road_counts <- bmr_acc %>%
+  group_by(road_description, slope_description) %>%
+  summarise(count = n())
+
+# Calculate the percentage of occurrences
+total_count <- sum(road_counts$count)
+road_counts <- road_counts %>%
+  mutate(percentage = round((count / total_count) * 100,2))
+
+# View the result
+road_counts
+
+```
+
+As there are many road and slope condition combination with small counts, we map all these combinations with records count percentage over total number of cases smaller than 1% to `other condition` to avoid crowding the visualization with too many unique values later and keep the focus on the conditions that presented in the majority of the accidents only.
+
+```{r}
+# Identify conditions with records percentage less than 1%
+rare_conditions <- road_counts %>%
+  filter(percentage < 1) %>%
+  mutate(road_condition = paste(road_description, slope_description, sep = "-")) %>%
+  pull(road_condition)
+
+# Map those rare causes to "other cause"
+bmr_acc <- bmr_acc %>%
+  mutate(road_condition = paste(road_description, slope_description, sep = "-")) %>%
+  mutate(road_rd = ifelse(road_condition %in% rare_conditions, "other conditions", road_condition))
+```
+
+Check the count and percentage again
+
+```{r}
+# Count the occurrences of each road and slop description combination
+road_counts_rd <- bmr_acc %>%
+  group_by(road_rd) %>%
+  summarise(count = n())
+
+# Calculate the percentage of occurrences
+total_count <- sum(road_counts_rd$count)
+road_counts_rd <- road_counts_rd %>%
+  mutate(percentage = round((count / total_count) * 100,2))
+
+# View the result
+road_counts_rd
+```
+
+# Geovisualization and Analysis
+
+## **Visualize the Geospatial Data**
+
 Plot the map of Traffic accident in Bangkok Metropolitan Region with overlaying road network.
 
 ```{r}
-tm_shape(bmr_prov) + 
+tm_shape(bmr_boundary) + 
   tm_polygons() +
   tm_shape(bmr_acc) +
   tm_dots(col = "red") +
@@ -192,3 +378,219 @@ tm_shape(bmr_prov) +
 ```
 
 It can be seen from the above map most of the accidents points already lie on the network, although there are a few points still lying off the network, the number is minimal. We proceed with this `network` dataset for further analysis.
+
+## Visualize Traffic Accidents Data
+
+In this section, we deep dive into traffic accidents data to understand the trend, severity and related cause of traffic accidents in Bangkok Metropolitan Region from 2019 to 2022.
+
+### Traffic accident trend
+
+Context - Covid lockdown in Thailand
+
+-   From mid-April to mid-May 2020, travel bans were enforced at the provincial and tambon (parish) levels. Beaches were closed, and a curfew was imposed from 10 PM to 6 AM.
+
+-   Travel policy was put in place for mandatory quarantine of flights arriving in Thailand. From November 2021, the retriction and covid test requirements started to get loosen up.
+
+-   From May 2022, fully-vaccinated travellers were not required RT-PCR result on arrival.
+
+Monthly traffic accidents trend by month by year.
+
+```{r}
+# Group data by year and month, and count the number of accidents
+accidents_by_month <- bmr_acc %>%
+  group_by(year, month_no) %>%
+  summarise(num_accidents = n())
+
+# Plot the data
+ggplot(accidents_by_month, aes(x = month_no, y = num_accidents, color = factor(year), group = year)) +
+  geom_line() +
+  labs(title = "Number of Accidents by Month for Each Year",
+       x = "Month No",
+       y = "Number of Accidents",
+       color = "Year") +
+  scale_x_continuous(breaks = 1:12, labels = month.abb) + # Label months as Jan, Feb, etc.
+  theme_minimal()
+
+```
+
+There are some similarities in the trend across the 4 years:
+
+-   **April** was the month with the highest number of accident in year 2019 and 2021, and second highest in 2022. April is the month Songkran, the largest festival in Thailand. The dip in 2020 was due to travel restriction during Covid.
+
+-   **February-March** and **May-June** were the months lower number of accidents throughout the year.
+
+-   The number of accidents has an increasing trend from June to **December**.
+
+As 2022 is the latest year and the number of accidents we keep all the months for further **Temporal NKDE** analysis.
+
+### Distance to Nearest Neighbor
+
+First we aggregate the events that are within 500 meters to each other.
+
+```{r}
+bmr_acc$weight <- 1
+bmr_acc_agg <- select(bmr_acc, c("acc_code","weight","geometry")) %>%
+  aggregate_points(500 ,weight = "weight")
+```
+
+Next the distance of each even to its nearest neighbor is calculated using below code chunk.
+
+```{r}
+knn_dists <- network_knn(origins = bmr_acc_agg, 
+                         lines = network, 
+                         k = 1,
+                         maxdistance = 2000,
+                         line_weight = "length",
+                         digits = 2, tol = 0.1, verbose = TRUE)
+```
+
+Plotting the result
+
+```{r}
+ggplot() + 
+  geom_histogram(aes(x = knn_dists$distances), fill = "skyblue", color = "black", bins = 50) + 
+  labs(x = "distance to nearest neighbour (in meters)")
+```
+
+As there are a few outliers, we remove the distances larger than 5000 meters and plot the result again
+
+```{r}
+distances = knn_dists$distances
+distance_ft = distances[distances < 5000]
+# Plot the histogram
+ggplot() + 
+  geom_histogram(aes(x = distance_ft), fill = "skyblue", color = "black", bins = 50) + 
+  labs(x = "Distance to nearest neighbour (in meters)")
+```
+
+The histogram is right skewed with 63% of events (after aggregation) falls within 2 kilometers from its nearest neighbors. This indicates there can be certain hot spots on BMR road `network` where traffic accidents occur frequently. We will examine these hot spots in the following TNKDE and NKDE analysis.
+
+# Temporal **Network Kernel Density Estimate**
+
+## Temporal Dimension
+
+First we convert `incident_datetime` column into a numeric field. As the first records occured on 1/1/2019, we count the number of days from 31/12/2018.
+
+```{r}
+bmr_acc$incident_date = as.Date(bmr_acc$incident_datetime)
+#bmr_acc$days_count <- as.POSIXct(bmr_acc$incident_date, format = "%d/%m/%Y")
+start <- as.POSIXct("31/12/2018", format = "%d/%m/%Y")
+bmr_acc$days_count <- difftime(bmr_acc$incident_date, start, units = "days")
+bmr_acc$days_count <- round(as.numeric(bmr_acc$days_count),0)
+```
+
+Derive the start of each month for year 2022.
+
+```{r}
+months <- as.character(1:12)
+months <- ifelse(nchar(months)==1, paste0("0", months), months)
+months_starts_labs <- paste("2022/",months,"/01", sep = "")
+months_starts_num <- as.POSIXct(months_starts_labs, format = "%Y/%m/%d")
+months_starts_num <- difftime(months_starts_num, start, units = "days")
+months_starts_num <- as.numeric(months_starts_num)
+months_starts_labs <- gsub("2022/", "", months_starts_labs, fixed = TRUE)
+```
+
+We calculate the kernel density values in time for several bandwidths.
+
+```{r}
+w <- rep(1,nrow(bmr_acc))
+samples <- seq(0, max(bmr_acc$days_count), 0.5)
+
+time_kernel_values <- data.frame(
+  bw_10 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 10, kernel_name = "quartic"),
+  bw_20 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 20, kernel_name = "quartic"),
+  bw_30 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 30, kernel_name = "quartic"),
+  bw_40 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 40, kernel_name = "quartic"),
+  bw_50 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 50, kernel_name = "quartic"),
+  bw_60 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 60, kernel_name = "quartic"),
+  time = samples
+)
+
+df_time <- reshape2::melt(time_kernel_values,id.vars = "time")
+df_time$variable <- as.factor(df_time$variable)
+
+ggplot(data = df_time) + 
+  geom_line(aes(x = time, y = value)) +
+  scale_x_continuous(breaks = months_starts_num, labels = months_starts_labs) +
+  facet_wrap(vars(variable), ncol=2, scales = "free") + 
+  theme(axis.text = element_text(size = 5))
+```
+
+# **Network KDE (NKDE) Analysis**
+
+## Prepare the lixels objects
+
+Before computing NKDE, the SpatialLines object needs to be divided into lixels (line pixels) with a specified minimum distance. This can be done using the *lixelize_lines.mc()* function from the **spNetwork** package, as shown in the code chunk below.
+
+```{r}
+lixels <- lixelize_lines.mc(network, 
+                         700, 
+                         mindist = 375)
+```
+
+The followings are observed from the above code chunk.
+
+-   The length of each lixel (*lx_length*) is set to 700 meters.
+
+-   The minimum length of a lixel (*mindist*) is set to 375 meters.
+
+After cutting, if the length of the final lixel is shorter than the minimum distance, it is merged with the previous lixel. If *mindist* = NULL, then it defaults to maxdist/10. Segments that are already shorter than the minimum distance are left unmodified.
+
+**Note**: The *lixelize_lines.mc()* function offers multicore support for this process.
+
+## **Generate line centre points**
+
+Next, *lines_center()* of spNetwork is used to generate a SpatialPointsDataFrame (i.e. samples) with line centre points as shown in the code chunk below.
+
+```{r}
+samples <- lines_center(lixels)
+```
+
+The points are located at center of the line based on the length of the line.
+
+## **Perform NKDE**
+
+NKDE is computed using below code chunk.
+
+```{r}
+densities <- nkde.mc(network, 
+                  events = bmr_acc,
+                  w = rep(1, nrow(bmr_acc)),
+                  samples = samples,
+                  kernel_name = "quartic",
+                  bw = 300, 
+                  div= "bw", 
+                  method = "simple", 
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(3,3), 
+                  max_depth = 8,
+                  agg = 5, 
+                  sparse = TRUE,
+                  verbose = FALSE)
+```
+
+## **Visualize NKDE**
+
+Before visualizing the NKDE values, the code chunk below inserts the computed density values (`densities`) into the `samples` and `lixels` objects as a new density field.
+
+```{r}
+samples$density <- densities
+lixels$density <- densities
+```
+
+Since svy21 projection system is in meter, the computed density values are very small (e.g., 0.0000005). The code chunk below rescales the density values from events per meter to events per kilometer.
+
+```{r}
+# rescaling to help the mapping
+samples$density <- samples$density*1000
+lixels$density <- lixels$density*1000
+```
+
+The code below uses appropriate functions of tmap package to prepare interactive and high cartographic quality map visualisation.
+
+```{r}
+tm_shape(lixels)+
+  tm_lines(col="density")
+```

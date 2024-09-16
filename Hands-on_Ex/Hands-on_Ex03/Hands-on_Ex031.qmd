@@ -43,6 +43,7 @@ We set the seed to ensure reproducibility of the Monte Carlo simulations later u
 ```{r}
 set.seed(2024)
 ```
+
 # Data Import and Preparation
 
 *st_read()* of sf package is used to import `Punggol_St` and `Punggol_CC` geospatial data sets as sf data frames using below code chunk.
@@ -114,7 +115,7 @@ lixels <- lixelize_lines(network,
 
 The followings are observed from the above code chunk.
 
--   The length of each lixel (*lx_length*) is set to 700 meters. This is a reasonable walking distance for parents/grandparents to walk their kids to the childcare centre. 
+-   The length of each lixel (*lx_length*) is set to 700 meters. This is a reasonable walking distance for parents/grandparents to walk their kids to the childcare centre.
 
 -   The minimum length of a lixel (*mindist*) is set to 375 meters.
 
@@ -263,7 +264,8 @@ The output of kfunctions() is a list containing:
 
 -   `valuesA`: A DataFrame containing the data used to generate the plots.
 
-For example, the  ggplot2 object of k-function can be visualized using the following code chunk.
+For example, the ggplot2 object of k-function can be visualized using the following code chunk.
+
 ```{r}
 kfun_childcare$plotk
 ```
