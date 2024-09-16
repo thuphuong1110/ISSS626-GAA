@@ -54,5 +54,12 @@
     "title": "In-class Exercise 4: Geographically Weighted Summary Statistics - GWmodel",
     "section": "4.4 Prepare the output data",
     "text": "4.4 Prepare the output data\nThe code chunk below is used to extract SDF data table from gwss object (output from gwss()). It is converted into data.frame using as.data.frame().\n\ngwstat_df = as.data.frame(gwstat$SDF)\n\nNext cbind() is used to append the newly derived data.frame onto hunan_sf sf data frame.\n\nhunan_gstat = cbind(hunan_sf, gwstat_df)"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Geospatial Analytics and Application (ISSS626)",
+    "section": "",
+    "text": "1 Welcome to my Geospatial Analytics Learning Journey\nHello there! I am Phuong. Welcome to my ISSS626 Geospatial Analysis and Application homepage. This course is taught by Prof KAM Tin Seong as part of my Master of IT in Business program at Singapore Management University. In this website, you will find my coursework prepared for this course, encompassing practical application of different techniques to transform and analyze spatial data.\n\n\n2 Website Sections\nThe coursework is divided into 3 main sections:\n\n\n\n\n\n\n\n\n\nHands-on Exercise\n\n\n\n\n\n\n\nIn-class Exercise\n\n\n\n\n\n\n\nTake-home Exercise\n\n\n\n\n\n\nHands-on Exercise: Hands-on practice under the guidance given by Prof Kam, using relevant R packages to perform geospatial analysis using public data sources.\nIn-class Exercise: Extend from the methods learned through Hands-on Exercise and include analysis result communication through data visualization.\nTake-home Exercise: Synthesize learning from course materials and above exercises to analyze real-world geospatial cases."
   }
 ]
