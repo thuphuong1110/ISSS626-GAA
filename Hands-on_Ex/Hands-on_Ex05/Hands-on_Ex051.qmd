@@ -1,0 +1,47 @@
+---
+title: "Hands-on Exercise 5.1: Global Measures of Spatial Autocorrelation"
+author: "Nguyen Bao Thu Phuong"
+date: "19 September 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Overview
+
+In this hands-on exercise, we explore how to compute Global Measures of Spatial Autocorrelation (GMSA) using the `spdep` package. By the end of this exercise, you will be able to:
+
+-   Import geospatial data using functions from the `sf` package.
+
+-   Import a CSV file using the `readr` package.
+
+-   Perform relational joins with the `dplyr` package.
+
+-   Compute Global Spatial Autocorrelation (GSA) statistics using `spdep` functions.
+
+-   Plot a Moran scatterplot.
+
+-   Compute and visualize a spatial correlogram.
+
+-   Provide a statistically sound interpretation of GSA statistics.
+
+# Getting Started
+
+## **The analytical question**
+
+In spatial policy, one of the main objectives for local governments and planners is to ensure the equitable distribution of development across a province. In this study, we aim to apply appropriate spatial statistical methods to determine whether development is evenly distributed geographically.
+
+If development is not evenly distributed, the next question will be: **"Is there evidence of spatial clustering?"** If the answer is yes, we will then explore **"Where are these clusters located?"**
+
+For this case study, we will examine the spatial pattern of a specific development indicator, **GDP per capita**, for Hunan Province in the People’s Republic of China.
+
+### **The Study Area and Data**
+
+Two data sets will be used in this hands-on exercise, they are:
+
+-   Hunan province administrative boundary layer at county level. This geospatial data set is in ESRI shapefile format.
+
+-   Hunan_2012.csv: This csv file contains selected Hunan’s local development indicators in 2012.

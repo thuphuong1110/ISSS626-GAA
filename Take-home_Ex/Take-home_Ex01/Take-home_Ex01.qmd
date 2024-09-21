@@ -1,7 +1,7 @@
 ---
 title: "Take-home Exercise 1: Geospatial Analytics for Public Good"
 author: "Nguyen Bao Thu Phuong"
-date: "3 September 2024" 
+date: "21 September 2024" 
 date-modified: "last-modified"
 execute:
   eval: true
@@ -10,74 +10,143 @@ execute:
   freeze: true
 ---
 
-# Import R packages
+# Overview
+
+## Setting the scene
+
+According to the World Health Organization (WHO) report, road traffic accidents cause 1.19 million deaths annually, with most fatalities occurring in low- and middle-income countries. Vulnerable road users, including pedestrians and motorcyclists, account for over half of these deaths, and road injuries are the leading cause of death for ages 5–29. The economic impact is severe, costing countries 3% of their GDP.
+
+Thailand's roads are the deadliest in Southeast Asia, with about 20,000 deaths annually. Between 2014 and 2021, Thailand saw a notable rise in accident frequencies. 19% of all accidents occurs on national highways, with most accidents happening on straight roads and at intersections.
+
+## Objectives
+
+Road traffic accidents are largely influenced by behavioral factors (driver behavior and performance) and environmental factors (weather and road conditions). While studies using Spatial Point Patterns Analysis (SPPA) have explored these factors, they often overlook temporal elements like season, day in the week, or time during the day.
+
+This study will focus on discovering factors affecting road traffic accidents in the Bangkok Metropolitan Region (BMR) - one of the most populated metropolitan regions in Thailand, using different spatio-temporal point pattern analysis techniques:
+
+-   Visualize the spatio-temporal dynamics of traffic accidents in BMR using appropriate statistical graphics and geovisualization methods.
+
+-   Perform spatial analysis of traffic accidents using appropriate Network Spatial Point Patterns Analysis methods.
+
+-   Conduct spatio-temporal analysis using appropriate Temporal Network Spatial Point Patterns Analysis methods.
+
+## The Data
+
+For the purpose of this study, 3 data sets are used:
+
+-   [Thailand Road Accident \[2019-2022\]](https://www.kaggle.com/datasets/thaweewatboy/thailand-road-accident-2019-2022) on Kaggle: provides statistics on recorded accidents in Thailand from 2019 to 2022. This dataset is in csv format.
+
+-   [Thailand Roads (OpenStreetMap Export)](https://data.humdata.org/dataset/hotosm_tha_roads) on HDX: road network in Thailand in ESRI shapefile format.
+
+-   [Thailand - Subnational Administrative Boundaries](https://data.humdata.org/dataset/cod-ab-tha?) on HDX: boundaries at different administrative levels in Thailand in ESRI shapefile format.
+
+All these dataset should be downloaded and store in `data/rawdata` folder under the same folder path with the Quarto document.
+
+# Set up R environment
+
+::: panel-tabset
+## Import R packages
+
+The below code chunk uses `p_load()` of pacman package to install and load relevant packages into R environment.
 
 ```{r}
-pacman::p_load(sf, raster, spatstat, tmap, tidyverse, spNetwork)
+pacman::p_load(sf,raster, spatstat, tmap, tidyverse, spNetwork, sparr, RColorBrewer)
 ```
 
-Set the seed to ensure reproducibility of further analysis
+-   [tmap](https://cran.r-project.org/web/packages/tmap/) for visualizing geospatial data
+
+-   [sf](https://r-spatial.github.io/sf/) for handling geospatial data
+
+-   [tidyverse](https://www.tidyverse.org/) for handling aspatial data
+
+-   [raster](https://rspatial.org/raster/) for handling raster data
+
+-   [spatstat](https://cran.r-project.org/web/packages/spatstat/index.html) for performing Spatial Point Patterns Analysis
+
+-   [sparr](https://tilmandavies.github.io/sparr/index.html) provides functions to estimate fixed and adaptive kernel-smoothed spatial relative risk surfaces via the density-ratio method and perform subsequent inference.
+
+-   [spNetwork](https://cran.r-project.org/web/packages/spNetwork/index.html) provides functions to perform Temporal-Spatial Point Patterns Analysis such as kernel density estimation (KDE) and K-function on network.
+
+## Set Seed
+
+We set the seed to ensure reproducibility and consistency of the remaining analysis and simulations to be done in this study.
 
 ```{r}
 set.seed(2024)
 ```
-
-# The Data
+:::
 
 # Spatial Data Wrangling
 
 ## Data Import and Preparation
 
+::: panel-tabset
 ### Traffic Accident
+
+The below code chunk carries out these transformation steps on `thai_road_accident_2019_2022.csv`:
+
+-   read_csv(): import csv file and assign data to a tibble data frame.
+
+-   select(): select relevant columns from the tibble data frame
+
+-   filter(): exclude records with invalid longitude or latitude value
+
+-   mutate(): create additional month/day/time columns from `incident_datetime`
+
+-   st_as_sf(): convert tible data frame into simple feature data frame
+
+-   st_transform(): reprojected the sf data frame to Thailand Projected coordinate system. EPSG is referred from [epsg.io](https://epsg.io/32647).
 
 ```{r}
 #| eval: false
 rdacc_sf = read_csv("data/rawdata/thai_road_accident_2019_2022.csv") %>%
-  select(-c("province_th", "route")) %>% # remove columns in Thai language
+  select(-c("province_th", "route", "report_datetime","agency")) %>% # remove irrelevant columns
   filter(!is.na(longitude) & longitude != "",
          !is.na(latitude) & latitude != "") %>%
   mutate(month_no = month(incident_datetime)) %>%
   mutate(month_fac = month(incident_datetime,
                        label = TRUE, abbr = TRUE)) %>%
-  mutate(dayofweek = day(incident_datetime)) %>%
+  mutate(dayofweek = wday(incident_datetime, week_start = 1)) %>%
+  mutate(dayofyear = yday(incident_datetime)) %>%
+  mutate(hourofday = hour(incident_datetime)) %>%
   mutate(year = year(incident_datetime)) %>%
   st_as_sf(coords = c("longitude", "latitude"),
            crs = 4326) %>%
   st_transform(crs = 32647)
 ```
 
-Write to rds format.
+Next we write the result sf data frame to rds format to avoid repeating the initial transformations.
 
 ```{r}
 #| eval: false
 write_rds(rdacc_sf, "data/rds/acc.rds")
 ```
 
-Read from rds file and filter for accident in Bangkok Metropolitan Region
+The below code chunk uses `read_rds()` to read in the rds file and filter for accidents in Bangkok Metropolitan Region. The output is assigned to `bmr_acc`.
 
 ```{r}
 bmr_acc = read_rds("data/rds/acc.rds") %>%
   filter(province_en %in% c("Bangkok","Nakhon Pathom", "Pathum Thani","Nonthaburi", "Samut Prakan", "Samut Sakhon"))
 ```
 
-Check the content and CRS of the simple features object. We can see:
+Next we check the content and CRS of the simple features object and observe the following:
 
--   The event object `bmr_acc` is already in POINT geometry type with dimension XY, which is as requried for further Network KDE (NKDE) analysis.
+-   The event object `bmr_acc` is already in POINT geometry type with dimension XY, which satisfies the requirement for further Kernel Density Estimate (KDE) analysis.
 
--   CRS is set to EPSG 32647 - Bangkok Metropolitan Region Projected CRS.
+-   CRS is set to EPSG 32647 as expected.
 
 ```{r}
 bmr_acc
 st_crs(bmr_acc)
 ```
 
-Check if the data contains any duplicated accident records.
+We check if the data contains any duplicated accident records. The return index is 0 indicates there is no duplicated records.
 
 ```{r}
 anyDuplicated(bmr_acc)
 ```
 
-Visualize `vehicle_type` recorded.
+As the `Thailand Roads` shapefile from OpenStreetMap contains various road types in Thailand, we visualize the frequency of accidents involving different vehicle types to decide which road types to be included for the scope of this analysis.
 
 ```{r}
 ggplot(data = bmr_acc, aes(x = fct_infreq(vehicle_type))) +
@@ -89,7 +158,7 @@ ggplot(data = bmr_acc, aes(x = fct_infreq(vehicle_type))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
 ```
 
-Below chart shows that majority of the accident were caused by motor vehicles, only 0.39 % were caused by bicycle, pedestrian, motorized tricycle and agricultural vehicle as calculated below.
+The above chart shows that the majority of the accidents were caused by motor vehicles, only 0.39 % were caused by bicycle, pedestrian, motorized tricycle and agricultural vehicle as calculated below.
 
 For the scope of this analysis, we will focus on motor vehicles related accident and road types that allow motor vehicles access only.
 
@@ -105,7 +174,7 @@ print(paste("Percentage of pedestrian and bicycle records:", round(percentage, 2
 
 ### Thailand Subnational Administrative Boundaries
 
-Import administrative boundaries at province level and filter for Bangkok Metropolitan Region.
+The below code chunk uses st_read() to imports the administrative boundaries at province level (level 1) and filter for provinces in Bangkok Metropolitan Region.
 
 ```{r}
 #| eval: false
@@ -114,45 +183,53 @@ bmr_prov = st_read(dsn = "data/rawdata",layer = "tha_admbnda_adm1_rtsd_20220121"
 
 ```
 
-Write to rds file
+The output is written to rds file to avoid repeating initial transformation steps.
 
 ```{r}
 #| eval: false
 write_rds(bmr_prov, "data/rds/bmr_prov.rds")
 ```
 
-Read from rds file.
+Next we read from rds file using `read_rds()`.
 
 ```{r}
 bmr_prov = read_rds("data/rds/bmr_prov.rds")
 ```
 
-Reproject to Thailand projected coordinate system
+and reproject to Thailand projected coordinate system using `st_transform()`. The output is assigned to `bmr_boundary`.
 
 ```{r}
 bmr_boundary = st_transform(bmr_prov, crs = 32647)
 ```
 
-Check the content and CRS of the simple features object. We can see:
+Checking the content and CRS of this sf data frame yields the below:
 
 -   The event object `bmr_boundary` is in POLYGON geometry type with dimension XY, which is as expected for boundary object.
 
--   CRS is set to EPSG 32647 - Bangkok Metropolitan Region Projected CRS.
+-   CRS is set to EPSG 32647 as expected.
 
 ```{r}
 bmr_boundary
 st_crs(bmr_boundary)
 ```
 
-Plot the boundaries.
+We use **tmap** to plot the output and can see the 6 provinces of BMR has been plotted correctly.
 
 ```{r}
-plot(st_geometry(bmr_boundary))
+tm_shape(bmr_boundary) +
+  tm_polygons() +
+  tm_text("ADM1_EN", size = 0.5)
 ```
 
 ### Thailand Bangkok Metropolitan Region Road
 
-Read in raw data export from OpenStreetMap, as the original datataset CRS is NA, we use st_set_crs() to assign the EPSG 4326 (assume the data is in WGS84 coordinate system). Next we filter for roads inside Bangkok Metropolitan Region boundary only.
+The below code chunk carries out the following steps:
+
+-   `st_read()`: read in the shapefile exported from OpenStreetMap
+
+-   `st_set_crs()`: as the original datataset CRS is NA, we use st_set_crs() to assign to EPSG 4326 of WGS84 geodetic coordinate system
+
+-   `st_intersection()`: filter for roads inside BMR boundary only.
 
 ```{r}
 #| eval: false
@@ -161,14 +238,22 @@ bmr_road = st_read(dsn = "data/rawdata",layer = "hotosm_tha_roads_lines_shp") %>
   st_intersection(bmr_prov)
 ```
 
-Write the roads inside Bangkok Metropolitan Region in WGS84 into rds file.
+We write the output into rds file using below code chunk.
 
 ```{r}
 #| eval: false
 write_rds(bmr_road, "data/rds/bmr_road.rds")
 ```
 
-As the OSM data include exhaustive road types (under column `highway`), we will filter for road types that allow motor vehicles access only. According to [WikiProject Thailand](https://wiki.openstreetmap.org/wiki/WikiProject_Thailand#Highway_classification), we filter for the below `highway` classification where motorcycle and car can access. Read from rds file, filter for relevant road types and reproject to Thailand Projected CRS (EPSG = 32647) .
+As the OSM data include exhaustive road types (under column `highway`), we will filter for road types that allow motor vehicles access only. According to [WikiProject Thailand](https://wiki.openstreetmap.org/wiki/WikiProject_Thailand#Highway_classification), we filter for the below `highway` classification where motorcycle and car can access.
+
+The below code chunk uses:
+
+-   `read_rds()` to read from rds file
+
+-   `filter()`: filter for relevant road types
+
+-   `st_transform()`: reproject to Thailand Projected CRS.
 
 ```{r}
 #| eval: false
@@ -177,23 +262,22 @@ bmr_road_ft = read_rds("data/rds/bmr_road.rds") %>%
   st_transform(crs = 32647)
 ```
 
-Write the transformed road data to rds file
+We rrite the transformed road data to rds file using `write_rds()`.
 
 ```{r}
 #| eval: false
 write_rds(bmr_road_ft, "data/rds/network.rds")
 ```
 
-Read from rds file
+Next we read from rds file using `read_rds()` and assigned the output to `network` object.
 
 ```{r}
 network = read_rds("data/rds/network.rds")
 ```
 
-Plot the road network
+We use `tm_shape()` and `tm_lines()` to plot the road network for a quick view.
 
 ```{r}
-tmap_mode("plot")
 tm_shape(network) +
   tm_lines()
 ```
@@ -210,56 +294,63 @@ ggplot(data = network, aes(x = fct_infreq(highway))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
 ```
 
-It can be seen that `residential` class takes up the majority number of records. As defined in [WikiProject Thailand](https://wiki.openstreetmap.org/wiki/WikiProject_Thailand#Highway_classification), `residential` class includes roads "within a residential area that gives the public access to one or multiple residences. Also used for roads within a gated housing estate (add access=private). Residential roads are typically short in length and often named." As these roads are inside residential area and usually short, we assume the number of traffic accidents happen on this type of road is small.
+It can be seen that `residential` class takes up the majority number of records. As defined in [WikiProject Thailand](https://wiki.openstreetmap.org/wiki/WikiProject_Thailand#Highway_classification), `residential` class includes roads "within a residential area that gives the public access to one or multiple residences. Also used for roads within a gated housing estate (add access=private). Residential roads are typically short in length and often named." As these roads are inside residential area and usually short, we assume the number of traffic accidents happening on this type of road is small.
 
-We exclude `highway=residential` from the `network` sf object
+We exclude `highway=residential` from the `network` sf object using below code chunk.
 
 ```{r}
 network = filter(network, ! highway %in% c("residential"))
 ```
 
-Check the content and CRS of the simple features object. We can see:
+Checking the content and CRS of `network` sf data frame yields the below:
 
--   The network object `network` is in GEOMETRY geometry type with dimension XY, while Network KDE (NKDE) analysis require LINESTRING geometry type.
+-   The object is in GEOMETRY geometry type with dimension XY, while NKDE analysis requires LINESTRING geometry type.
 
--   CRS is set to EPSG 32647 - Bangkok Metropolitan Region Projected CRS.
+-   CRS is set to EPSG 32647 as expected.
 
 ```{r}
 network
 st_crs(network)
 ```
 
-Convert the geometry type to LINESTRING using below code chunk
+The below code chunk converts the the geometry type to LINESTRING using `st_cast()`.
 
 ```{r}
 #| warning: false
 network = st_cast(network, "LINESTRING")
 ```
 
-Check if data contains any duplicated record.
+We check if data contains any duplicated record using `anyDuplicated()` . The return index is 0 indicating there is no duplicated records in `network` sf data frame.
 
 ```{r}
 anyDuplicated(network)
 ```
+:::
 
 ## Data Wrangling
 
-Road traffic accidents are generally caused by two main factors: **behavioral** and **environmental**. Behavioral factors, which are often the primary cause, can be divided into driver behavior (driving style) and driver performance (driving skills) (Elander, West, & French, 1993). Environmental factors include conditions like poor visibility due to weather (e.g., heavy rain or fog) and hazardous road features such as sharp bends, slippery slopes, or blind spots.
+As stated in the Objective section, road traffic accidents are generally caused by two main factors: **behavioral** and **environmental**. Behavioral factors, which are often the primary cause, can be divided into driver behavior (driving style) and driver performance (driving skills) (Elander, West, & French, 1993). Environmental factors include conditions like poor visibility due to weather (e.g., heavy rain or fog) and hazardous road features such as sharp bends, slippery slopes, or blind spots.
 
-In this section, we will map the details provided in `bmr_acc` to those main factors.
+In this section, we perform additional mapping on the columns relevant to these factors in `bmr_acc` sf data frame.
 
-## Traffic Accident Presumed Cause
+::: panel-tabset
+### Accident Presumed Cause
 
-First we check the distribution of accident presume causes.
+First we check the frequency of different accident presume causes using below code chunk:
+
+-   group_by(): group the records by `presumed_cause` column
+
+-   summarise(): returns 1 row representing the count of records under each presumed cause.
 
 ```{r}
 cause_counts <- bmr_acc %>%
   group_by(presumed_cause) %>%
-  summarise(count = n())
+  summarise(count = n()) %>%
+  ungroup()
 cause_counts
 ```
 
-As there are many causes with a small counts, we map all these causes with records count smaller than or equal to 50 to `other cause` for avoid crowding the visualization with too many unique values later.
+As there are many causes with a small counts, the below code chunk is used to map all causes with records count smaller than or equal to 50 to `other cause` to avoid crowding the visualization with too many insignificant variables later. The modified mapping is save in `presumed_cause_rd` column.
 
 ```{r}
 # Identify causes with less than 50 records
@@ -272,35 +363,42 @@ bmr_acc <- bmr_acc %>%
   mutate(presumed_cause_rd = ifelse(presumed_cause %in% rare_causes, "other cause", presumed_cause))
 ```
 
-Check the cause count again.
+We check the cause count again.
 
 ```{r}
 cause_counts_rd <- bmr_acc %>%
   group_by(presumed_cause_rd) %>%
-  summarise(count = n())
+  summarise(count = n()) %>%
+  ungroup()
 cause_counts_rd
 ```
 
-The rare causes are mapped to `other cause` already.
+We can see the individual rare causes are mapped to `other cause` already.
 
-## Weather Condition of Accident
+### Accident Weather Condition
+
+First we check the frequency of different weather conditions using below code chunk:
+
+-   group_by(): group the records by `weather_condition` column
+
+-   summarise(): returns 1 row representing the count of records under each weather condition.
 
 ```{r}
 weather_counts <- bmr_acc %>%
   group_by(weather_condition) %>%
-  summarise(count = n())
+  summarise(count = n()) %>%
+  ungroup()
 weather_counts
 ```
 
-We can see that 90% of accidents (11,711/12,986) happened under `clear` weather and 7.7% happened under `rainy` weather. This signifies majority of road accidents in BMR were not due to weather related reason.
+We can see that 90% of accidents (over total 12,986 records) happened under `clear` weather and 7.7% happened under `rainy` weather. This signifies majority of road accidents in BMR may not be due to weather.
 
-As other weather condition has relative small counts, we map all these conditions to `other condition` for avoid crowding the visualization with too many unique values later.
+As other weather condition has relative small counts, we map all these conditions to `other condition` using below code chunk. The modified mapping is saved in `weather_rd` column.
 
 ```{r}
-# Identify causes with less than 50 records
 weather_other <- c("dark", "foggy", "land slide", "natural disaster", "other")
 
-# Map those rare causes to "other cause"
+# Map those rare condition to "other condition"
 bmr_acc <- bmr_acc %>%
   mutate(weather_rd = ifelse(weather_condition %in% weather_other, "other condition", weather_condition))
 
@@ -311,13 +409,22 @@ weather_counts_rd <- bmr_acc %>%
 weather_counts_rd
 ```
 
-## Road and Slope Condition of Accident
+We can see the remaining conditions are mapped to `other condition` already.
+
+### Road and Slope Condition of Accident
+
+First we check the frequency of different road and slope description combination using below code chunk:
+
+-   group_by(): group the records by `road_descroption` and `slope_description` columns
+
+-   summarise(): returns 1 row representing the count of records under each combination.
 
 ```{r}
-# Count the occurrences of each road and slop description combination
+# Count the occurrences of each road and slope description combination
 road_counts <- bmr_acc %>%
   group_by(road_description, slope_description) %>%
-  summarise(count = n())
+  summarise(count = n()) %>%
+  ungroup()
 
 # Calculate the percentage of occurrences
 total_count <- sum(road_counts$count)
@@ -329,7 +436,9 @@ road_counts
 
 ```
 
-As there are many road and slope condition combination with small counts, we map all these combinations with records count percentage over total number of cases smaller than 1% to `other condition` to avoid crowding the visualization with too many unique values later and keep the focus on the conditions that presented in the majority of the accidents only.
+As there are many road and slope condition combination with small counts, we map all these combinations with records count percentage over total number of cases smaller than 1% to `other condition` keep the focus on the conditions that presented in the majority of the accidents only.
+
+The below code chunk use `mutate()` to create `road_rd` column , which has `value = other conditions` for accidents under conditions with small counts and `value = road_description-slope_description` otherwise.
 
 ```{r}
 # Identify conditions with records percentage less than 1%
@@ -344,7 +453,7 @@ bmr_acc <- bmr_acc %>%
   mutate(road_rd = ifelse(road_condition %in% rare_conditions, "other conditions", road_condition))
 ```
 
-Check the count and percentage again
+We check the count and percentage in `road_rd` column using below code chunk.
 
 ```{r}
 # Count the occurrences of each road and slop description combination
@@ -361,11 +470,20 @@ road_counts_rd <- road_counts_rd %>%
 road_counts_rd
 ```
 
-# Geovisualization and Analysis
+We can see all the rare combinations have been mapped to `other-conditions` already.
+:::
 
-## **Visualize the Geospatial Data**
+# Exploratory Data Analysis
 
-Plot the map of Traffic accident in Bangkok Metropolitan Region with overlaying road network.
+## Visualize the Geospatial Data
+
+First we plot the map of traffic accidents in BMR with overlaying road network using different function of **tmap** package:
+
+-   tm_polygons(): plot the area boundaries
+
+-   tm_dots(): plot each accident as a red dot (col = 'red') on the map
+
+-   tm_lines(): plot the lines to represent the road network in BMR
 
 ```{r}
 tm_shape(bmr_boundary) + 
@@ -377,23 +495,16 @@ tm_shape(bmr_boundary) +
 
 ```
 
-It can be seen from the above map most of the accidents points already lie on the network, although there are a few points still lying off the network, the number is minimal. We proceed with this `network` dataset for further analysis.
+The above map shows most of the accidents points already lie on the network. Although there are a few points still lying off the network, this number is trivial. We can confirm the `network` sf data frame cover majority of the accident points and can be used for the remaining analysis.
 
 ## Visualize Traffic Accidents Data
 
 In this section, we deep dive into traffic accidents data to understand the trend, severity and related cause of traffic accidents in Bangkok Metropolitan Region from 2019 to 2022.
 
-### Traffic accident trend
+::: panel-tabset
+### Traffic Accident Trend
 
-Context - Covid lockdown in Thailand
-
--   From mid-April to mid-May 2020, travel bans were enforced at the provincial and tambon (parish) levels. Beaches were closed, and a curfew was imposed from 10 PM to 6 AM.
-
--   Travel policy was put in place for mandatory quarantine of flights arriving in Thailand. From November 2021, the retriction and covid test requirements started to get loosen up.
-
--   From May 2022, fully-vaccinated travellers were not required RT-PCR result on arrival.
-
-Monthly traffic accidents trend by month by year.
+To understand if there is any seasonal factor impacting occurence of traffic accidents in BMR, the below code chunk is uses `ggplot()` to plot the monthly traffic accidents trend by month by year.
 
 ```{r}
 # Group data by year and month, and count the number of accidents
@@ -413,27 +524,94 @@ ggplot(accidents_by_month, aes(x = month_no, y = num_accidents, color = factor(y
 
 ```
 
-There are some similarities in the trend across the 4 years:
+We can observe some similarities in the trend across the 4 years:
 
--   **April** was the month with the highest number of accident in year 2019 and 2021, and second highest in 2022. April is the month Songkran, the largest festival in Thailand. The dip in 2020 was due to travel restriction during Covid.
+-   **April** was the month with the highest number of accident in year 2019 and 2021, and second highest in 2022. This may be due to the Songkran festival in April, which is the largest festival in Thailand. The dip in 2020 can be attributed towards travel restriction during Covid.
 
--   **February-March** and **May-June** were the months lower number of accidents throughout the year.
+-   **February-March** and **May-June** were the months with lower number of accidents throughout the year.
 
--   The number of accidents has an increasing trend from June to **December**.
+-   The number of accidents had an increasing trend from June to **December**.
 
-As 2022 is the latest year and the number of accidents we keep all the months for further **Temporal NKDE** analysis.
+As 2022 is the most recent year with available data and the number of accidents shows a concerning increase towards the end of the year, for the scope of this study we will focus on accidents happening in 2022 only.
+
+The below code chunk uses `filter()` to filter for accidents recorded in 2022.
+
+```{r}
+bmr_acc = bmr_acc |>
+  filter(year == 2022)
+```
+
+### Traffic Accident by Province
+
+To understand the geopraphic distribution of traffic accidents in BMR, we use `ggplot()` to plot the number of accidents by province as in below code chunk.
+
+```{r}
+# Group by province and count the number of accidents
+accidents_by_province <- bmr_acc %>%
+  group_by(province_en) %>%
+  summarise(accident_count = n()) %>%
+  ungroup()
+
+# Create a column chart
+ggplot(accidents_by_province, aes(x = reorder(province_en, -accident_count), y = accident_count)) +
+  geom_col(fill = "skyblue") +
+  geom_text(aes(label = accident_count), vjust = -0.5, color = "black", size = 3.5) +  # Add data labels
+  labs(title = "Number of Accidents by Province", 
+       x = "Province", 
+       y = "Number of Accidents") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x-axis labels for readability
+
+```
+
+The column chart shows the first 4 provinces already account for 91% of the total number of accidents in 2022. For the remaining analysis we will focus on these 4 provinces only.
+
+The below code chunk filter for these 4 provinces and select the relevant columns using `select()`.
+
+```{r}
+network = network |>
+  filter(ADM1_EN %in% c("Bangkok", "Pathum Thani", "Samut Prakan", "Samut Sakhon")) |>
+  select(c("name_en","highway","osm_id","ADM1_EN"))
+```
+
+The same filter is applied for the `bmr_acc` and `bmr_boundary` sf dataframe as below.
+
+```{r}
+# Traffic accident data frame
+bmr_acc = bmr_acc |>
+  filter(province_en %in% c("Bangkok", "Pathum Thani", "Samut Prakan", "Samut Sakhon"))
+
+# Region boundaries data frame
+bmr_boundary = bmr_boundary |>
+  filter(ADM1_EN %in% c("Bangkok", "Pathum Thani", "Samut Prakan", "Samut Sakhon"))
+```
+
+We plot the map again using functions of tmap and can see the 2 provinces Nontha Buri and Nakhon Pathom are properly excluded.
+
+```{r}
+tm_shape(bmr_boundary) +
+  tm_polygons() +
+tm_shape(bmr_acc) +
+  tm_dots(col = 'red') +
+tm_shape(network) +
+  tm_lines()
+```
 
 ### Distance to Nearest Neighbor
 
-First we aggregate the events that are within 500 meters to each other.
+Now we want to understand the spread of accident points along the network. We snap the points to the network and calculate the distance of each point to its nearest neighbor on the network.
+
+First we aggregate the events that are within 30 meters to each other using `aggregate_points()`.
+
+**Note**: for the distance calculation to work, we need to ensure no point shares the exact same location on the network. Hence the points close to each other needs to be aggregated before proceeding further.
 
 ```{r}
 bmr_acc$weight <- 1
-bmr_acc_agg <- select(bmr_acc, c("acc_code","weight","geometry")) %>%
-  aggregate_points(500 ,weight = "weight")
+bmr_acc_agg <- bmr_acc |>
+  aggregate_points(30 ,weight = "weight")
 ```
 
-Next the distance of each even to its nearest neighbor is calculated using below code chunk.
+Next the distance of each even to its nearest neighbor on the network is calculated using `network_knn()`.
 
 ```{r}
 knn_dists <- network_knn(origins = bmr_acc_agg, 
@@ -441,10 +619,10 @@ knn_dists <- network_knn(origins = bmr_acc_agg,
                          k = 1,
                          maxdistance = 2000,
                          line_weight = "length",
-                         digits = 2, tol = 0.1, verbose = TRUE)
+                         digits = 2, tol = 0.1, verbose = FALSE)
 ```
 
-Plotting the result
+We plotting the result using `ggplot()`.
 
 ```{r}
 ggplot() + 
@@ -452,7 +630,7 @@ ggplot() +
   labs(x = "distance to nearest neighbour (in meters)")
 ```
 
-As there are a few outliers, we remove the distances larger than 5000 meters and plot the result again
+The above histogram shows that there are a few points that are very far from its nearest neighbor. We remove the records with distance larger than 5000 meters and plot the result again using below code chunk.
 
 ```{r}
 distances = knn_dists$distances
@@ -460,28 +638,557 @@ distance_ft = distances[distances < 5000]
 # Plot the histogram
 ggplot() + 
   geom_histogram(aes(x = distance_ft), fill = "skyblue", color = "black", bins = 50) + 
-  labs(x = "Distance to nearest neighbour (in meters)")
+  labs(x = "Distance to nearest neighbour (in meters)") +
+  theme_minimal()
 ```
 
-The histogram is right skewed with 63% of events (after aggregation) falls within 2 kilometers from its nearest neighbors. This indicates there can be certain hot spots on BMR road `network` where traffic accidents occur frequently. We will examine these hot spots in the following TNKDE and NKDE analysis.
+The histogram is right skewed with 85.3% of events (after aggregating events within 30 meters) falls within 1 kilometers from its nearest neighbors. This indicates there are certain hot spots on BMR road `network` where traffic accidents occur frequently. We will examine these hot spots in the following TNKDE and NKDE analysis.
 
-# Temporal **Network Kernel Density Estimate**
+```{r}
+# Calculate percentage of accidents with nearest neighbor distance lower than 1 kilometer over all accidents in 2022
+length(distances[distances < 1000])/length(distances)
+```
+:::
+
+# Spatio-Temporal Point Pattern Analysis
+
+A **spatio-temporal point process** is a set of points where each point represents the time and location of an event, such as disease incidence, species sightings, or natural disasters. The analysis of these patterns is increasingly important due to the growth of geographically and temporally indexed data. In the past decade, numerous methods for spatio-temporal point pattern analysis have been developed and implemented in R.
+
+We will use the **Spatio-Temporal Kernel Density Estimate** (STKDE) method to understand the spatio-temporal dynamics of road accidents in Thailand across different provinces and time during 2022.
+
+## Visualize geographic distribution of traffic accident by month
+
+As we observe some seasonality in the number of traffic accidents by month in the previous section, we further investigate if there is any difference in the location of those accidents by month.
+
+The below code chunk uses multiple functions of **tmap** to plot the accidents by month. Each accident is represented by a red dot and each province boundary is filled by a different color.
+
+```{r}
+tm_shape(bmr_boundary)+
+  tm_fill(col = "ADM1_EN", palette = 'Pastel2') +
+  tm_legend(width = 0.5, height = 0.5) +
+tm_shape(network) +
+  tm_lines(alpha = 0.5) +
+tm_shape(bmr_acc) +
+  tm_dots(size = 0.1, col = 'red') +
+tm_facets(by="month_fac", 
+            free.coords=FALSE, 
+            drop.units = TRUE)
+```
+
+The above maps show that the locations of accidents resembles almost the same pattern across all the months, with many points clustered in these 3 parts of the road network:
+
+-   Center of Bangkok
+
+-   Along the vertical road connecting Pathum Thani, Bangkok and Samut Prakan province
+
+-   Along the horizontal road connecting Samut Sakhon and Bangkok
+
+## Compute STKDE for different time dimensions
+
+In this section, we explore how to compute STKDE using `spattemp.density()`of **sparr** package.
+
+As `spattemp.density()` requires the object in ppp class, first we create an owin object from `bmr_boundary` to define the observation window for the ppp object using below code chunk.
+
+```{r}
+acc_owin <- as.owin(bmr_boundary)
+acc_owin
+```
+
+Next, `class()` of base R is used to confirm if the output is indeed an owin object.
+
+```{r}
+class(acc_owin)
+```
+
+::: panel-tabset
+### Compute STKDE by month
+
+#### Create ppp object
+
+The code chunk below select only the necessary fields (`month_no`) from the `bmr_acc` sf data frame and conver to ppp object using `as.ppp()`. This is because `as.ppp()` function only requires the mark field and geometry field from sf data frame.
+
+```{r}
+acc_month_ppp = bmr_acc |>
+  select(month_no) |>
+  as.ppp()
+```
+
+Next we include owin object and check if the output `acc_month_owin` is in the correct object class. We can see the object is already in ppp class.
+
+```{r}
+acc_month_owin <- acc_month_ppp[acc_owin]
+summary(acc_month_owin)
+```
+
+`plot()` of base R is used to plot the owin object. The output map shows proper province boundaries and marked points of 12 months.
+
+```{r}
+plot(acc_month_owin)
+```
+
+#### Compute Spatio-temporal KDE
+
+Next, `spattemp.density()` of **sparr** package is used to compute the STKDE.
+
+```{r}
+acc_month_stkde <- spattemp.density(acc_month_owin)
+summary(acc_month_stkde)
+```
+
+`plot()` of base R is used to plot the spatio-temporal KDE between January 2022 - December 2022 using below code chunk.
+
+```{r}
+tims <- c(1,2,3,4,5,6,7,8,9,10,11,12)
+par(mfcol=c(4,3), mar = c(2, 2, 2, 2))
+for(i in tims){ 
+  plot(acc_month_stkde, i,
+       override.par=FALSE,
+       fix.range=TRUE, 
+       main=paste("KDE at month",i))
+}
+```
+
+We can observe the highest density in December in Bangkok and Samut Sakhon area, followed by January. From August to November, the density spread more equally across the 4 provinces.
+
+Thailand experiences 3 main seasons:
+
+-   The wet season from May to October
+
+-   The cool season from November to February
+
+-   The hot season from March to May
+
+We can observe that the hot and wet season have lower STKDE compared versus cool season (especially in January and December). This can be partly contributed to cool season being high season for travelling in those areas with high density.
+
+### Compute STKDE by day of week
+
+#### Create ppp object
+
+The code chunk below select only the necessary fields (`dayofweek`) from the `bmr_acc` sf data frame and conver to ppp object using `as.ppp()`. This is because `as.ppp()` function only requires the mark field and geometry field from sf data frame.
+
+```{r}
+acc_day_ppp <- bmr_acc |> 
+  select(dayofweek) |>
+  as.ppp()
+```
+
+Next we include owin object and check if the output `acc_day_owin` is in the correct object class. We can see the object is already in ppp class.
+
+```{r}
+acc_day_owin <- acc_day_ppp[acc_owin]
+summary(acc_day_owin)
+```
+
+`plot()` of base R is used to plot the owin object. The output map shows proper province boundaries and marked points of 7 days in a week.
+
+```{r}
+plot(acc_day_owin)
+```
+
+#### Compute Spatio-temporal KDE
+
+Next, `spattemp.density()` of **sparr** package is used to compute the STKDE.
+
+```{r}
+acc_day_stkde <- spattemp.density(acc_day_owin)
+summary(acc_day_stkde)
+```
+
+`plot()` of base R is used to plot the spatio-temporal KDE for each day in a week.
+
+```{r}
+tims <- c(1,2,3,4,5,6,7)
+wdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+par(mfcol=c(3,3), mar = c(2, 2, 2, 2))
+for(i in tims){ 
+  plot(acc_day_stkde, i,
+       override.par=FALSE,
+       fix.range=TRUE, 
+       main=paste("KDE on",wdays[i]))
+}
+```
+
+The above maps show that all 4 provinces have areas with high density on Monday (highest in Bangkok), follow by Sunday where high density areas are more spread out. The density is lower during middle of the week (Tuesday to Thursday) and starts to pick up towards the weekend (Friday to Sunday).
+
+### Compute STKDE by hour of day
+
+#### Create ppp object
+
+The code chunk below select only the necessary fields (`hourofday`) from the `bmr_acc` sf data frame and conver to ppp object using `as.ppp()`. This is because `as.ppp()` function only requires the mark field and geometry field from sf data frame.
+
+```{r}
+acc_hr_ppp <- bmr_acc |> 
+  select(hourofday) |>
+  as.ppp()
+```
+
+Next we include owin object and check if the output `acc_hr_owin` is in the correct object class. We can see the object is already in ppp class.
+
+```{r}
+acc_hr_owin <- acc_hr_ppp[acc_owin]
+summary(acc_hr_owin)
+```
+
+`plot()` is used to plot the owin object to examine the correctness of the output object.The output map shows proper province boundaries and marked points of 24 hours in a day.
+
+```{r}
+plot(acc_hr_owin)
+```
+
+#### Compute Spatio-temporal KDE
+
+Next, `spattemp.density()` of **sparr** package is used to compute the STKDE.
+
+```{r}
+acc_hr_stkde <- spattemp.density(acc_hr_owin)
+summary(acc_hr_stkde)
+```
+
+`plot()` of base R is used to plot the spatio-temporal KDE of the first half of the day (from 0 AM to 12 PM).
+
+```{r}
+tims <- c(0,1,2,3,4,5,6,7,8,9,10,11)
+par(mfcol=c(4,3), mar = c(2, 2, 2, 2))
+for(i in tims){ 
+  plot(acc_hr_stkde, i,
+       override.par=FALSE,
+       fix.range=TRUE, 
+       main=paste("KDE at hour",i))
+}
+```
+
+The highest density can be observed at midnight ( around 0 AM) and from 8AM to 11:59AM.
+
+We continue to use `plot()` of base R to plot the STKDE of the second half of the day.
+
+```{r}
+tims <- c(12,13,14,15,16,17,18,19,20,21,22,23)
+par(mfcol=c(4,3), mar = c(2, 2, 2, 2))
+for(i in tims){ 
+  plot(acc_hr_stkde, i,
+       override.par=FALSE,
+       fix.range=TRUE, 
+       main=paste("KDE at hour",i))
+}
+```
+
+For the remainder of the day, high density can be observed during lunch time (12PM - 13PM), in the evening (16PM - 19PM) and late night (22PM -23PM).
+:::
+
+# Network Spatial Point Patterns Analysis
+
+## Prepare the lixels objects and generate line centre points
+
+Before computing NKDE, the SpatialLines object needs to be divided into lixels (line pixels) with a specified minimum distance. This can be done using the `lixelize_lines()` function from the spNetwork package, as shown in the code chunk below.
+
+According to the nearest neighbor distance plotted above, the smallest network distance between 2 accident points is under 100 meters. The lixel length and mindist should be larger than 100 meters to ensure these cases can be captured.
+
+```{r}
+lixels <- lixelize_lines(network, 
+                         800, 
+                         mindist = 400)
+```
+
+The followings are observed from the above code chunk.
+
+-   The length of each lixel (`lx_length`) is set to 800 meters.
+
+-   The minimum length of a lixel (`mindist`) is set to 400 meters.
+
+After cutting, if the length of the final lixel is shorter than the minimum distance, it is merged with the previous lixel. If mindist = NULL, then it defaults to maxdist/10. Segments that are already shorter than the minimum distance are left unmodified.
+
+Note: The lixelize_lines.mc() function offers multicore support for this process.
+
+Next, `lines_center()` of **spNetwork** is used to generate a SpatialPointsDataFrame (i.e. `samples`) with line centre points as shown in the code chunk below.
+
+```{r}
+samples <- lines_center(lixels)
+```
+
+These points are located at center of the lixel based on the length of the lixel.
+
+## Perform NKDE
+
+NKDE is computed using below code chunk, using the following key arguments:
+
+-   kernel_name = "quartic": ensure no negative value returned.
+
+-   method = "simple": for faster calculation given the data size. Since the `network` contains many intersections, we acknowledge this simple method may overestimate the density at road intersections.
+
+-   adaptive = FALSE and bw = 500: use fixed bandwidth of 500 meters
+
+-   agg = 30: aggregate accident points within 30 meters of each other
+
+```{r}
+
+# Calculate NKDE
+densities <- nkde(network, 
+                  events = bmr_acc,
+                  w = rep(1, nrow(bmr_acc)),
+                  samples = samples,
+                  kernel_name = "quartic",
+                  bw = 500,
+                  adaptive = FALSE,
+                  div= "bw", 
+                  method = "simple", 
+                  digits = 1, 
+                  tol = 1,
+                  grid_shape = c(2,2), 
+                  max_depth = 8,
+                  agg = 30, 
+                  sparse = TRUE,
+                  verbose = FALSE)
+
+```
+
+The below code chunk performs the following steps:
+
+-   Assign the calculated densities to column `density` in `samples` sf data frame and multiply by 1000 to convert to density by km.
+
+-   Plot the density value for each lixel centre using multiple functions of **tmap**.
+
+```{r}
+samples$density <- densities
+
+# rescaling to help the mapping
+samples$density <- samples$density*1000
+
+samples2 <- samples[order(samples$density),]
+
+colorRamp <- brewer.pal(n = 10, name = "Spectral")
+colorRamp <- rev(colorRamp)
+
+title <- paste0("Traffic accident density by km in 2022,",
+                "\nwithin a radius of 500 metres")
+
+tm_shape(bmr_boundary) +
+  tm_polygons() +
+tm_shape(network) + 
+  tm_lines("black") + 
+  tm_shape(samples2) + 
+  tm_dots("density", style = "cont", palette = colorRamp, n = 5, size = 0.1) + 
+  tm_layout(legend.outside = TRUE, 
+            main.title = title , main.title.size = 1)
+```
+
+We can see from the above map accidents density is higher across certain roads:
+
+-   The vertical road connecting Samut Prakan, Bangkok and Pathum Thani.
+
+-   The horizontal roads connecting Samut Sakhon, Bangkok and Samut Prakan. There are some hot spot on the road in Samut Prakan province as well.
+
+## Network Constrained G- and K-Function Analysis
+
+In this section, we perform complete spatial randomness (CSR) test using `kfunctions()` of spNetwork package. The null hypothesis is defined as:
+
+H0: The observed spatial point events (i.e traffic accidents) are randomly distributed over the street `network` in the 4 provinces in BMR.
+
+The CSR test assumes a binomial point process, meaning the centres are randomly and independently distributed. If rejected, it indicates the centres are spatially dependent and form nonrandom patterns.
+
+```{r}
+kfun_acc <- kfunctions(network, 
+                             bmr_acc,
+                             start = 0, 
+                             end = 1500, 
+                             step = 100, 
+                             width = 500,
+                             agg = 30,
+                             nsim = 29, 
+                             resolution = 50,
+                             verbose = FALSE, 
+                             conf_int = 0.05)
+```
+
+**Note**: 9 key arguments used in above code chunk:
+
+-   lines: A feature collection of linestrings representing the underlying network. The geometries must be simple Linestrings.
+
+-   points: A `sf` data frame representing points on the network. These points will be snapped on their nearest line.
+
+-   start: A double, the start value for evaluating the k and g functions.
+
+-   end: A double, the last value for evaluating the k and g functions.
+
+-   step: A double, specifying the interval between evaluations of the k and g functions.
+
+-   width: The width of each donut for the g-function.
+
+-   nsim: An integer for the number of Monte Carlo simulations. Typically, more than 50 simulations are needed for inference.
+
+-   resolution: A value to reduce calculation time when simulating random points by splitting edges and selecting vertices.
+
+-   conf_int: A double for setting the confidence interval (default is 0.05).
+
+For more details on these arguments, refer to the spNetwork user guide.
+
+The output of kfunctions() is a list containing:
+
+-   `plotkA`: A ggplot2 object representing the k-function values.
+
+-   `plotgA`: A ggplot2 object representing the g-function values.
+
+-   `valuesA`: A DataFrame containing the data used to generate the plots.
+
+For example, the ggplot2 object of k-function can be visualized using the following code chunk.
+
+```{r}
+kfun_acc$plotk
+```
+
+The blue line is the empirical network K-function of traffic accidents in the 4 provinces in BMR. The gray envelop represents the results of the 30 simulations in the confidence interval 2.5% - 97.5%. Since the blue line segment is way above the gray area, we can infer that the accidents are more clustered than what can be expected from a random distribution.
+
+The below code chunk is used to plot the G function.
+
+```{r}
+kfun_acc$plotg
+```
+
+The G-function also demonstrates a clustered distribution. For distance lower than 1 kilometer, a local maximum is observed between 250 to 350 meters. This is consistent with the observations that certain part of the road networks have significantly higher density compared to others.
+
+## Analyze Accidents at high NKDE lixels
+
+First we assign the calculated NKDE to `lixel` sf data frame and multiply by 1000 to convert to density per km using below code chunk.
+
+```{r}
+lixels$density = densities*1000
+```
+
+Next we use `summary()` to check the quantile distribution of `density` column.
+
+```{r}
+summary(lixels$density)
+```
+
+In this section, we will focus on accidents happening at lixels with density higher than the mean. This is to understand which factors contribute to those parts of the road with above average accident density.
+
+We remove the geometry column from `lixels` and create a new data frame `lixels_df` for easier data frame manipulation later on.
+
+```{r}
+lixels_df = st_drop_geometry(lixels)
+```
+
+The below code chunk performs the following steps:
+
+-   Snaps accident points to the nearest lixel within 50 meters using `snapPointsToLines2()` and return the respective `lineID` of the closest lixel.
+
+-   `left_join()` with lixels_df to bring in the density values and other road attributes.
+
+-   Filter for accidents snapped to lixels with density above average.
+
+```{r}
+snapped_accidents = snapPointsToLines2(
+  bmr_acc,
+  lixels,
+  idField = "lineID",
+  snap_dist = 50) |>
+  left_join(lixels_df, by = c("nearest_line_id" = "lineID")) |>
+  filter(density > 0.0009879)
+```
+
+### Environmental Factors
+
+The environmental factors: road type, weather condition and road condition are visualized using `ggplot()` as in below code chunks.
+
+::: panel-tabset
+#### Road Type
+
+```{r}
+# Group by road type and count the number of accidents
+accidents_by_road_type <- snapped_accidents %>%
+  group_by(highway) %>%
+  summarise(accident_count = n()) %>%
+  ungroup()
+
+# Create a column chart
+ggplot(accidents_by_road_type, aes(x = reorder(highway, -accident_count), y = accident_count)) +
+  geom_col(fill = "skyblue") +
+  geom_text(aes(label = accident_count), vjust = -0.5, color = "black", size = 3.5) +  # Add data labels
+  labs(title = "Number of Accidents by Road Type", 
+       x = "Road Type", 
+       y = "Number of Accidents") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The plot shows more than half of the accidents in 2022 happened on the motorway.
+
+#### Weather Condition
+
+```{r}
+# Group by condition and count the number of accidents
+accidents_by_weather <- snapped_accidents %>%
+  group_by(weather_rd) %>%
+  summarise(accident_count = n()) %>%
+  ungroup()
+
+# Create a column chart
+ggplot(accidents_by_weather, aes(x = reorder(weather_rd, -accident_count), y = accident_count)) +
+  geom_col(fill = "skyblue") +
+  geom_text(aes(label = accident_count), vjust = -0.5, color = "black", size = 3.5) +  # Add data labels
+  labs(title = "Number of Accidents by Weather Condition", 
+       x = "Weather Condition", 
+       y = "Number of Accidents") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The above plot shows that 90% of the accidents in 2022 happened under clear weather.
+
+#### Road Condition
+
+```{r}
+# Group by condition and count the number of accidents
+accidents_by_road <- snapped_accidents %>%
+  group_by(road_rd) %>%
+  summarise(accident_count = n()) %>%
+  ungroup()
+
+# Create a column chart
+ggplot(accidents_by_road, aes(x = reorder(road_rd, -accident_count), y = accident_count)) +
+  geom_col(fill = "skyblue") +
+  geom_text(aes(label = accident_count), vjust = -0.5, color = "black", size = 3.5) +  # Add data labels
+  labs(title = "Number of Accidents by Road Condition", 
+       x = "Road Condition", 
+       y = "Number of Accidents") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The chart shows that 72.4% of the accidents happened on straight road with no slope.
+:::
+
+### Behavioural Factors
+
+The behavioral factors from presumed cause are visualized using `ggplot()` as in below code chunk.
+
+```{r}
+# Group by condition and count the number of accidents
+accidents_by_cause <- snapped_accidents %>%
+  group_by(presumed_cause_rd) %>%
+  summarise(accident_count = n()) %>%
+  ungroup()
+
+# Create a column chart
+ggplot(accidents_by_cause, aes(x = reorder(presumed_cause_rd, -accident_count), y = accident_count)) +
+  geom_col(fill = "skyblue") +
+  geom_text(aes(label = accident_count), vjust = -0.5, color = "black", size = 3.5) +  # Add data labels
+  labs(title = "Number of Accidents by Presumed Cause", 
+       x = "Presumed Cause", 
+       y = "Number of Accidents") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The chart shows 72% of accidents was due to speeding.
+
+# Temporal Network Spatial Point Pattern Analysis
 
 ## Temporal Dimension
 
-First we convert `incident_datetime` column into a numeric field. As the first records occured on 1/1/2019, we count the number of days from 31/12/2018.
+First we derive the start of each month for year 2022 to use as label for the later maps.
 
 ```{r}
-bmr_acc$incident_date = as.Date(bmr_acc$incident_datetime)
-#bmr_acc$days_count <- as.POSIXct(bmr_acc$incident_date, format = "%d/%m/%Y")
-start <- as.POSIXct("31/12/2018", format = "%d/%m/%Y")
-bmr_acc$days_count <- difftime(bmr_acc$incident_date, start, units = "days")
-bmr_acc$days_count <- round(as.numeric(bmr_acc$days_count),0)
-```
-
-Derive the start of each month for year 2022.
-
-```{r}
+start <- as.POSIXct("2022/01/01", format = "%Y/%m/%d")
 months <- as.character(1:12)
 months <- ifelse(nchar(months)==1, paste0("0", months), months)
 months_starts_labs <- paste("2022/",months,"/01", sep = "")
@@ -491,20 +1198,20 @@ months_starts_num <- as.numeric(months_starts_num)
 months_starts_labs <- gsub("2022/", "", months_starts_labs, fixed = TRUE)
 ```
 
-We calculate the kernel density values in time for several bandwidths.
+Next we calculate the kernel density values in time for several bandwidths using below code chunk.
 
 ```{r}
 w <- rep(1,nrow(bmr_acc))
-samples <- seq(0, max(bmr_acc$days_count), 0.5)
+samples_t <- seq(0, max(bmr_acc$dayofyear), 1)
 
 time_kernel_values <- data.frame(
-  bw_10 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 10, kernel_name = "quartic"),
-  bw_20 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 20, kernel_name = "quartic"),
-  bw_30 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 30, kernel_name = "quartic"),
-  bw_40 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 40, kernel_name = "quartic"),
-  bw_50 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 50, kernel_name = "quartic"),
-  bw_60 = tkde(bmr_acc$days_count, w = w, samples = samples, bw = 60, kernel_name = "quartic"),
-  time = samples
+  bw_10 = tkde(bmr_acc$dayofyear, w = w, samples = samples_t, bw = 10, kernel_name = "quartic"),
+  bw_20 = tkde(bmr_acc$dayofyear, w = w, samples = samples_t, bw = 20, kernel_name = "quartic"),
+  bw_30 = tkde(bmr_acc$dayofyear, w = w, samples = samples_t, bw = 30, kernel_name = "quartic"),
+  bw_40 = tkde(bmr_acc$dayofyear, w = w, samples = samples_t, bw = 40, kernel_name = "quartic"),
+  bw_50 = tkde(bmr_acc$dayofyear, w = w, samples = samples_t, bw = 50, kernel_name = "quartic"),
+  bw_60 = tkde(bmr_acc$dayofyear, w = w, samples = samples_t, bw = 60, kernel_name = "quartic"),
+  time = samples_t
 )
 
 df_time <- reshape2::melt(time_kernel_values,id.vars = "time")
@@ -517,80 +1224,150 @@ ggplot(data = df_time) +
   theme(axis.text = element_text(size = 5))
 ```
 
-# **Network KDE (NKDE) Analysis**
+We can see that a bandwidth between 30 and 40 days can capture the fluctuations and the trend in traffic accidents throughout 2022: the increase in traffic accident during mid of April (Songkran festival), followed by a decrease until Jun, before the number of accidents starts to increase until the end of the year.
 
-## Prepare the lixels objects
+## Spatial Temporal Bandwidth Selection
 
-Before computing NKDE, the SpatialLines object needs to be divided into lixels (line pixels) with a specified minimum distance. This can be done using the *lixelize_lines.mc()* function from the **spNetwork** package, as shown in the code chunk below.
-
-```{r}
-lixels <- lixelize_lines.mc(network, 
-                         700, 
-                         mindist = 375)
-```
-
-The followings are observed from the above code chunk.
-
--   The length of each lixel (*lx_length*) is set to 700 meters.
-
--   The minimum length of a lixel (*mindist*) is set to 375 meters.
-
-After cutting, if the length of the final lixel is shorter than the minimum distance, it is merged with the previous lixel. If *mindist* = NULL, then it defaults to maxdist/10. Segments that are already shorter than the minimum distance are left unmodified.
-
-**Note**: The *lixelize_lines.mc()* function offers multicore support for this process.
-
-## **Generate line centre points**
-
-Next, *lines_center()* of spNetwork is used to generate a SpatialPointsDataFrame (i.e. samples) with line centre points as shown in the code chunk below.
+The cross validation likelihood of different network and time bandwiths are calculated using `bw_tnkde_cv_likelihood_calc()` as in below code chunk.
 
 ```{r}
-samples <- lines_center(lixels)
+cv_scores <- bw_tnkde_cv_likelihood_calc(
+  bws_net = seq(500,1000,100),
+  bws_time = seq(20,60,10),
+  lines = network,
+  events = bmr_acc,
+  time_field = "dayofyear",
+  w = rep(1, nrow(bmr_acc)),
+  kernel_name = "quartic",
+  method = "simple",
+  diggle_correction = FALSE,
+  study_area = NULL,
+  max_depth = 8,
+  digits = 2,
+  tol = 0.1,
+  agg = 30,
+  sparse=TRUE,
+  grid_shape=c(1,1),
+  sub_sample=1,
+  verbose = FALSE)
 ```
-
-The points are located at center of the line based on the length of the line.
-
-## **Perform NKDE**
-
-NKDE is computed using below code chunk.
 
 ```{r}
-densities <- nkde.mc(network, 
-                  events = bmr_acc,
-                  w = rep(1, nrow(bmr_acc)),
-                  samples = samples,
-                  kernel_name = "quartic",
-                  bw = 300, 
-                  div= "bw", 
-                  method = "simple", 
-                  digits = 1, 
-                  tol = 1,
-                  grid_shape = c(3,3), 
-                  max_depth = 8,
-                  agg = 5, 
-                  sparse = TRUE,
-                  verbose = FALSE)
+cv_scores
 ```
 
-## **Visualize NKDE**
+According to this “leave one out cross validation” method, the bandwidths of 1000 metres and 60 days has the lowest cross validation score and are chosen to be the optimal bandwidth for further density calculation.
 
-Before visualizing the NKDE values, the code chunk below inserts the computed density values (`densities`) into the `samples` and `lixels` objects as a new density field.
+## Perform Temporal Network Kernel Density Estimate (TNKDE)
+
+The TNKDE is calculated using below code chunk.
 
 ```{r}
-samples$density <- densities
-lixels$density <- densities
+#| warning: false
+# choosing sample in times (every 30 days)
+sample_time <- seq(0, max(bmr_acc$dayofyear), 30)
+
+# calculating densities
+tnkde_densities <- tnkde(lines = network,
+                   events = bmr_acc,
+                   time_field = "dayofyear",
+                   w = rep(1, nrow(bmr_acc)), 
+                   samples_loc = samples,
+                   samples_time = sample_time, 
+                   kernel_name = "quartic",
+                   bw_net = 1000, bw_time = 60,
+                   method = "simple",
+                   div = "bw", max_depth = 8,
+                   digits = 2, tol = 0.01,
+                   agg = 30, grid_shape = c(2,2), 
+                   verbose  = FALSE)
 ```
 
-Since svy21 projection system is in meter, the computed density values are very small (e.g., 0.0000005). The code chunk below rescales the density values from events per meter to events per kilometer.
+We add the TNKDE of every 30 days to the `samples` sf data frame
 
 ```{r}
-# rescaling to help the mapping
-samples$density <- samples$density*1000
-lixels$density <- lixels$density*1000
+samples$tnkde_30 = tnkde_densities[,2]
+samples$tnkde_60 = tnkde_densities[,3]
+samples$tnkde_90 = tnkde_densities[,4]
+samples$tnkde_120 = tnkde_densities[,5]
+samples$tnkde_150 = tnkde_densities[,6]
+samples$tnkde_180 = tnkde_densities[,7]
+samples$tnkde_210 = tnkde_densities[,8]
+samples$tnkde_240 = tnkde_densities[,9]
+samples$tnkde_270 = tnkde_densities[,10]
+samples$tnkde_300 = tnkde_densities[,11]
+samples$tnkde_330 = tnkde_densities[,12]
+samples$tnkde_360 = tnkde_densities[,13]
 ```
 
-The code below uses appropriate functions of tmap package to prepare interactive and high cartographic quality map visualisation.
+We use different functions of **tmap** to plot the map for each sample in time.
 
 ```{r}
-tm_shape(lixels)+
-  tm_lines(col="density")
+# Extract the last 12 columns' names
+cols_to_plot <- tail(colnames(samples), 12)
+# Plot the map for each column
+tm_shape(bmr_boundary) +
+    tm_polygons() +
+  tm_shape(samples) + 
+    tm_dots(col = cols_to_plot, style = "kmeans", palette = "Reds",  n=10, size = 0.05) + 
+  tm_layout(legend.show = FALSE, 
+            title = cols_to_plot , title.size = 1)
 ```
+
+The location of many of the hotspots stay along the same roads across different points in time:
+
+-   Several hotspots detected along the vertical road connecting Samut Prakan, Bangkok and Pathum Thani province. Refer to the maps on TNKDE at 60 days, 150 to 180 days, 240 to 300 days.
+
+-   Several hotspots detected along the horizontal road connecting Bangkok and Samut Sakhon province. Refer to the maps on TNKDE at 240 to 330 days.
+
+# Conclusions and Future Improvements
+
+## Factors affecting Traffic Accidents
+
+The above analysis highlights a few key factors affecting road traffic accidents in the 4 provinces of BMR:
+
+-   Environmental factors: do not seem to play an important role as majority of the accidents happened under clear weather (90%) and on straigh road with no slope (72%).
+
+-   **Driver behaviors**: is an important factor as 72% of the accidents recorded was due to speeding.
+
+-   **Spatial factor**: Network Constrained G- and K-Function results confirm the clustered distribution of accidents in BMR.
+
+**On Spatial temporal factors**
+
+-   **Month in year**: High STKDE in in December in Bangkok and Samut Sakhon area, followed by January. From August to November, the density spread more equally across the 4 provinces. Cool season (especially in January and December) has the highest density, this can be partly due to this season being high season for tourism in Thailand.
+
+-   **Day in week**: All 4 provinces have areas with high density on Monday (highest in Bangkok), followed by Sunday where high density areas are more spread out. The density is lower during middle of the week (Tuesday to Thursday) and starts to pick up towards the weekend (Friday to Sunday).
+
+-   **Hour of day**: The highest density can be observed at late night (22PM to 0 AM of the next day) and from 8AM to 11:59AM. For the remainder of the day, high density can be observed during lunch time (12PM - 13PM) and in the evening (16PM - 19PM).
+
+-   The **TNKDE** maps show many of the hotspots stay along the same roads across different points in time: the vertical road connecting Samut Prakan, Bangkok and Pathum Thani province and the horizontal road connecting Bangkok and Samut Sakhon province.
+
+## Future Improvement
+
+As I encountered certain computational capacity constraint given the data size, the below improvements can be done on the analysis of the accidents spatial temporal distribution in BMR:
+
+-   As the accidents distribution is clustered, using adaptive bandwith instead of fixed bandwidth for KDE methods may avoid underestimating the density of areas with lower number of accidents.
+
+-   User method = "continuous" instead of "simple" since the road network in BMR contains many intersections.
+
+-   Use cross validation method for bandwidth selection to allow for a more data-driven approach when selecting bandwidth.
+
+-   Increase the number of simulations to calculate network constrained G and K functions for a more comprehensive range of comparison.
+
+# Reference
+
+Jeremy Gelb (2024). [Temporal Network Kernel Density Estimate](https://jeremygelb.github.io/spNetwork/articles/TNKDE.html)
+
+Jeremy Gelb (2024). [K-nearest neighbour adaptive bandwidth](https://jeremygelb.github.io/spNetwork/articles/web_vignettes/AdaptiveBW.html)
+
+Jeremy Gelb (2024). [Network k Functions](https://jeremygelb.github.io/spNetwork/articles/KNetworkFunctions.html)
+
+Jeremy Gelb (2024). [Network Kernel Density Estimate](https://jeremygelb.github.io/spNetwork/articles/NKDE.html)
+
+Tin Seong Kam (2024). [Spatio-Temporal Point Patterns Analysis](https://r4gdsa.netlify.app/chap06) From R for Geospatial Data Science and Analytics
+
+Tin Seong Kam (2024). [Network Constrained Spatial Point Patterns Analysis](https://r4gdsa.netlify.app/chap07)
+
+WikiProject Thailand. [WikiProject Thailand](https://wiki.openstreetmap.org/wiki/WikiProject_Thailand#Highway_classification)
+
+Wikipedia. [Bangkok Metropolitan Region](https://en.wikipedia.org/wiki/Bangkok_Metropolitan_Region)

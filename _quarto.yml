@@ -19,6 +19,10 @@ website:
           href: "Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex031.html"
         - text: "4.1 - Spatial Weights and Applications"
           href: "Hands-on_Ex/Hands-on_Ex04/Hands-on_Ex041.html"
+        - text: "5.1 - Global Measures of Spatial Autocorrelation"
+          href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex051.html"
+        - text: "5.2 - Local Measures of Spatial Autocorrelation"
+          href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex052.html"
       - text: "In-class Exercise"
         menu: 
         - text: "1 - Geospatial Data Analysis with R"
@@ -32,7 +36,7 @@ website:
       - text: "Take-home Exercise"
         menu: 
         - text: "1 - Geospatial Analytics for Public Good"
-          href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex00.html"
+          href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html"
     right:
       - href: index.qmd
         text: Home
