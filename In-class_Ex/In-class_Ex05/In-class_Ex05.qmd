@@ -1,0 +1,224 @@
+---
+title: "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method"
+author: "Nguyen Bao Thu Phuong"
+date: "23 September 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Import R packages
+
+```{r}
+pacman::p_load(sf, tmap, tidyverse, sfdep)
+```
+
+# The Data
+
+Two data sets will be used in this hands-on exercise:
+
+-   Hunan province administrative boundary layer at county level. This is a geospatial data set in ESRI shapefile format.
+
+-   Hunan_2012.csv: This csv file contains selected Hunan’s local development indicators in 2012.
+
+# Getting the Data Into R Environment
+
+In this section, we explore how to bring a geospatial data and its associated attribute table into R environment. The geospatial data is in ESRI shapefile format and the attribute table is in csv fomat.
+
+## Import shapefile into R environment
+
+The code chunk below uses `st_read()`of **sf** package to import Hunan shapefile into R. The imported shapefile will be in **simple features** object.
+
+```{r}
+hunan <- st_read(dsn = "data/geospatial", 
+                 layer = "Hunan")
+```
+
+## Import csv file into r environment
+
+Next, we import *Hunan_2012.csv* into R by using read_csv() of **readr** package. The output is in R data frame class.
+
+```{r}
+hunan2012 <- read_csv("data/aspatial/Hunan_2012.csv")
+```
+
+## Perform relational join
+
+The code below updates the attribute table of Hunan’s **SpatialPolygonsDataFrame** by merging it with the attribute fields of the **hunan2012** dataframe, using the **left_join()** function from the **dplyr** package.
+
+```{r}
+hunan_GDPPC <- left_join(hunan,hunan2012) %>%
+  select(1:4, 7, 15)
+```
+
+# Plot a choropleth map
+
+```{r}
+tm_shape(hunan_GDPPC) +
+  tm_fill("GDPPC",
+          style = "quantile",
+          n = 5,
+          palette = "Blues") +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "GDPPC by Hunan's Counties")
+```
+
+# Global Measures of Spatial Association
+
+## Step 1: Derive Queen's contiguity weights: sfdep methods
+
+```{r}
+wm_q = hunan_GDPPC |>
+  mutate(nb = st_contiguity(geometry),
+         wt = st_weights(nb,
+                         style = "W"),
+         .before = 1) # insert to before column 1 instead of inserting at the back
+```
+
+st_weights() provide 3 arguments:
+
+-   nb: a neighbor list object created by st_neighbors()
+
+-   style: This defines how weights are assigned. The options include:
+
+    -   “B”: Basic binary coding (neighbors = 1, non-neighbors = 0).
+
+    -   “W”: Row-standardized (weights sum to 1 for each row/neighborhood).
+
+    -   “C”: Globally standardized (weights sum to 1 across all regions).
+
+    -   “U”: Like “C” but scaled by the number of neighbors.
+
+    -   “S”: Variance-stabilizing scheme (Tiefelsdorf et al. 1999).
+
+-   allow_zero: If `TRUE`, regions without neighbors are assigned zero weights, ensuring that their lagged values are zero.
+
+## Compute Global Moran's I
+
+```{r}
+global_moran_test(wm_q$GDPPC,
+                      wm_q$nb,
+                      wm_q$wt)
+```
+
+As the p-value is smaller than 0.05, we can reject the null hypothesis. Since Moran I statistic is larger than 0, we infer positive correlation.
+
+## Perform Global Moran'I permutation test
+
+In practice, Monte Carlo simulation should be used to perform the statistics test. The below code chunk perform permutation test using global_moran_perm() from sfdep package.
+
+::: panel-tabset
+### Step 1
+
+Set the seed
+
+```{r}
+set.seed(1234)
+```
+
+### Step 2
+
+Next global_moran_perm() is used to run permuation test.
+
+```{r}
+global_moran_perm(wm_q$GDPPC,
+                  wm_q$nb,
+                  wm_q$wt,
+                  nsim = 99)
+```
+
+As p-value is smaller than 0.05 and the statistic is 0.3, which is larger than 0. We can reject the null hypothesis and infer positive correlation.
+:::
+
+# Compute Local Moran's I
+
+In this section, we use local_moran() to compute Local Moran's I of GDPPC at county level.
+
+```{r}
+lisa = wm_q |>
+  mutate(local_moran = local_moran(
+    GDPPC, nb, wt, nsim = 99),
+    .before = 1) |>
+      unnest(local_moran)
+```
+
+The output include the below columns:
+
+-   ii: local Moran's I
+
+-   p_ii: frequentist p-value
+
+-   p_ii_sim: p-value from simulation
+
+-   p_folded_sim: p-value from k-folded simulation (using pysal)
+
+-   mean: can use if the data has normal distribution
+
+-   media: when data is skewed
+
+# Visualize p-value of local Moran's I
+
+```{r}
+map1 = tm_shape(lisa) +
+  tm_fill("p_ii_sim") + 
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "p-value simulation of local Moran's I",
+            main.title.size = 0.8, legend.width = 0.5,
+            legend.height = 0.5)
+
+map2 = tm_shape(lisa) +
+  tm_fill("p_ii",
+          breaks = c(0, 0.001, 0.01, 0.05, 1),
+          labels = c("0.001","0.01","0.05","Not sig")) +
+  tm_borders(alpha = 0.5) +
+  tm_layout(main.title = "p-value of local Moran's I",
+            main.title.size = 0.8)
+
+tmap_arrange(map1, map2, ncol = 2)
+```
+
+# Visualize LISA map
+
+```{r}
+lisa_sig = lisa |>
+  filter(p_ii < 0.05)
+tm_shape(lisa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+  tm_shape(lisa_sig) +
+  tm_fill("mean") +
+  tm_borders(alpha = 0.4)
+```
+
+# Compute Local Gi statistics
+
+```{r}
+wm_idw = hunan_GDPPC |>
+  mutate(nb = st_contiguity(geometry),
+         wts = st_inverse_distance(nb, geometry, scale=1 ,alpha =1))
+```
+
+```{r}
+HCSA = wm_idw |>
+  mutate(local_Gi = local_gstar_perm(
+    GDPPC, nb, wt, nsim=99),
+    .before = 1) |>
+      unnest(local_Gi)
+HCSA
+```
+
+## Visualizing Gi\*
+
+```{r}
+HCSA_sig = HCSA |>
+  filter(p_sim < 0.05)
+tm_shape(HCSA) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+  tm_shape(HCSA_sig) +
+  tm_fill("cluster") +
+  tm_borders(alpha = 0.4)
+```

@@ -985,5 +985,89 @@
     "title": "In-class Exercise 3: Network Constrained Spatial Point Patterns Analysis",
     "section": "6.4 Visualize NKDE",
     "text": "6.4 Visualize NKDE\nBefore visualizing the NKDE values, the code chunk below inserts the computed density values (densities) into the samples and lixels objects as a new density field.\n\nsamples$density &lt;- densities\nlixels$density &lt;- densities\n\nSince svy21 projection system is in meter, the computed density values are very small (e.g., 0.0000005). The code chunk below rescales the density values from events per meter to events per kilometer.\n\n# rescaling to help the mapping\nsamples$density &lt;- samples$density*1000\nlixels$density &lt;- lixels$density*1000\n\nThe code below uses appropriate functions of tmap package to prepare interactive and high cartographic quality map visualisation.\n\ntmap_mode('view')\n\ntmap mode set to interactive viewing\n\ntm_shape(lixels)+\n  tm_lines(col=\"density\")+\ntm_shape(childcare)+\n  tm_dots()\n\n\n\n\ntmap_mode('plot')\n\ntmap mode set to plotting\n\n\nThe interactive map above effectively reveals road segments with relatively higher density of childcare centres (darker color) than road segments with relatively lower density of childcare centres (lighter color)."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "",
+    "text": "pacman::p_load(sf, tmap, tidyverse, sfdep)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#import-shapefile-into-r-environment",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#import-shapefile-into-r-environment",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "3.1 Import shapefile into R environment",
+    "text": "3.1 Import shapefile into R environment\nThe code chunk below uses st_read()of sf package to import Hunan shapefile into R. The imported shapefile will be in simple features object.\n\nhunan &lt;- st_read(dsn = \"data/geospatial\", \n                 layer = \"Hunan\")\n\nReading layer `Hunan' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex05\\data\\geospatial' \n  using driver `ESRI Shapefile'\nSimple feature collection with 88 features and 7 fields\nGeometry type: POLYGON\nDimension:     XY\nBounding box:  xmin: 108.7831 ymin: 24.6342 xmax: 114.2544 ymax: 30.12812\nGeodetic CRS:  WGS 84"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#import-csv-file-into-r-environment",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#import-csv-file-into-r-environment",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "3.2 Import csv file into r environment",
+    "text": "3.2 Import csv file into r environment\nNext, we import Hunan_2012.csv into R by using read_csv() of readr package. The output is in R data frame class.\n\nhunan2012 &lt;- read_csv(\"data/aspatial/Hunan_2012.csv\")\n\nRows: 88 Columns: 29\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr  (2): County, City\ndbl (27): avg_wage, deposite, FAI, Gov_Rev, Gov_Exp, GDP, GDPPC, GIO, Loan, ...\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#perform-relational-join",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#perform-relational-join",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "3.3 Perform relational join",
+    "text": "3.3 Perform relational join\nThe code below updates the attribute table of Hunan’s SpatialPolygonsDataFrame by merging it with the attribute fields of the hunan2012 dataframe, using the left_join() function from the dplyr package.\n\nhunan_GDPPC &lt;- left_join(hunan,hunan2012) %&gt;%\n  select(1:4, 7, 15)\n\nJoining with `by = join_by(County)`"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#step-1-derive-queens-contiguity-weights-sfdep-methods",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#step-1-derive-queens-contiguity-weights-sfdep-methods",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "5.1 Step 1: Derive Queen’s contiguity weights: sfdep methods",
+    "text": "5.1 Step 1: Derive Queen’s contiguity weights: sfdep methods\n\nwm_q = hunan_GDPPC |&gt;\n  mutate(nb = st_contiguity(geometry),\n         wt = st_weights(nb,\n                         style = \"W\"),\n         .before = 1) # insert to before column 1 instead of inserting at the back\n\nst_weights() provide 3 arguments:\n\nnb: a neighbor list object created by st_neighbors()\nstyle: This defines how weights are assigned. The options include:\n\n“B”: Basic binary coding (neighbors = 1, non-neighbors = 0).\n“W”: Row-standardized (weights sum to 1 for each row/neighborhood).\n“C”: Globally standardized (weights sum to 1 across all regions).\n“U”: Like “C” but scaled by the number of neighbors.\n“S”: Variance-stabilizing scheme (Tiefelsdorf et al. 1999).\n\nallow_zero: If TRUE, regions without neighbors are assigned zero weights, ensuring that their lagged values are zero."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#compute-global-morans-i",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#compute-global-morans-i",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "5.2 Compute Global Moran’s I",
+    "text": "5.2 Compute Global Moran’s I\n\nglobal_moran_test(wm_q$GDPPC,\n                      wm_q$nb,\n                      wm_q$wt)\n\n\n    Moran I test under randomisation\n\ndata:  x  \nweights: listw    \n\nMoran I statistic standard deviate = 4.7351, p-value = 1.095e-06\nalternative hypothesis: greater\nsample estimates:\nMoran I statistic       Expectation          Variance \n      0.300749970      -0.011494253       0.004348351 \n\n\nAs the p-value is smaller than 0.05, we can reject the null hypothesis. Since Moran I statistic is larger than 0, we infer positive correlation."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#perform-global-morani-permutation-test",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#perform-global-morani-permutation-test",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "5.3 Perform Global Moran’I permutation test",
+    "text": "5.3 Perform Global Moran’I permutation test\nIn practice, Monte Carlo simulation should be used to perform the statistics test. The below code chunk perform permutation test using global_moran_perm() from sfdep package.\n\nStep 1Step 2\n\n\nSet the seed\n\nset.seed(1234)\n\n\n\nNext global_moran_perm() is used to run permuation test.\n\nglobal_moran_perm(wm_q$GDPPC,\n                  wm_q$nb,\n                  wm_q$wt,\n                  nsim = 99)\n\n\n    Monte-Carlo simulation of Moran I\n\ndata:  x \nweights: listw  \nnumber of simulations + 1: 100 \n\nstatistic = 0.30075, observed rank = 100, p-value &lt; 2.2e-16\nalternative hypothesis: two.sided\n\n\nAs p-value is smaller than 0.05 and the statistic is 0.3, which is larger than 0. We can reject the null hypothesis and infer positive correlation."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#visualizing-gi",
+    "href": "In-class_Ex/In-class_Ex05/In-class_Ex05.html#visualizing-gi",
+    "title": "In-class Exercise 5: Global and Local Measures of Spatial Autocorrelation - sfdep method",
+    "section": "9.1 Visualizing Gi*",
+    "text": "9.1 Visualizing Gi*\n\nHCSA_sig = HCSA |&gt;\n  filter(p_sim &lt; 0.05)\ntm_shape(HCSA) +\n  tm_polygons() +\n  tm_borders(alpha = 0.5) +\n  tm_shape(HCSA_sig) +\n  tm_fill(\"cluster\") +\n  tm_borders(alpha = 0.4)\n\nWarning: One tm layer group has duplicated layer types, which are omitted. To\ndraw multiple layers of the same type, use multiple layer groups (i.e. specify\ntm_shape prior to each of them)."
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html",
+    "href": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html",
+    "title": "Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques",
+    "section": "",
+    "text": "In this exercise, we explore how to delineate homogeneous regions using geographically referenced multivariate data through two analyses:\n\nHierarchical cluster analysis\nSpatially constrained cluster analysis.\n\nThe below techniques will be covered in this exercise:\n\nConvert GIS polygon data to R’s simple feature data.frame using the sf package.\nConvert simple feature data.frame to R’s SpatialPolygonDataFrame object using sf.\nPerform cluster analysis with hclust() in Base R.\nConduct spatially constrained cluster analysis with skater() in Base R.\nVisualize analysis output using ggplot2 and tmap."
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html#the-analytical-question",
+    "href": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html#the-analytical-question",
+    "title": "Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques",
+    "section": "2.1 The Analytical Question",
+    "text": "2.1 The Analytical Question\nIn geobusiness and spatial policy, it’s common to delineate areas into homogeneous regions using multivariate data. This exercise focuses on delineating Shan State, Myanmar, using multiple ICT measures: Radio, Television, Landline phone, Mobile phone, Computer, and Internet at home."
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html#the-data",
+    "href": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html#the-data",
+    "title": "Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques",
+    "section": "2.2 The data",
+    "text": "2.2 The data\nTwo datasets will be used:\n\nMyanmar Township Boundary Data: GIS data in ESRI shapefile format with township boundary information.\nShan-ICT.csv: Extract from the 2014 Myanmar Population and Housing Census at the township level.\n\nBoth datasets are from the Myanmar Information Management Unit (MIMU)."
+  },
+  {
+    "objectID": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html#install-and-load-r-packages",
+    "href": "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html#install-and-load-r-packages",
+    "title": "Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques",
+    "section": "2.3 Install and Load R Packages",
+    "text": "2.3 Install and Load R Packages\nWe install and load the necessary R packages using below code chunk:\n\nSpatial data handling: sf, rgdal, spdep\nAttribute data handling: tidyverse (includes readr, ggplot2, dplyr)\nChoropleth mapping: tmap\nMultivariate data visualization and analysis: corrplot, ggpubr, heatmaply\nCluster analysis: cluster, ClustGeo\n\n\npacman::p_load(spdep, tmap, sf, ClustGeo, \n               ggpubr, cluster, factoextra, NbClust,\n               heatmaply, corrplot, psych, tidyverse, GGally)\n\nInstalling package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'\n(as 'lib' is unspecified)\n\n\nWarning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:\n  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'\n\n\npackage 'ClustGeo' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n    C:\\Users\\ngbtp\\AppData\\Local\\Temp\\Rtmp6XA1JA\\downloaded_packages\n\n\n\nClustGeo installed\nInstalling package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'\n(as 'lib' is unspecified)\n\n\nalso installing the dependencies 'corrplot', 'ggsci', 'gridExtra', 'polynom', 'rstatix'\n\n\nWarning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:\n  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'\n\n\npackage 'corrplot' successfully unpacked and MD5 sums checked\npackage 'ggsci' successfully unpacked and MD5 sums checked\npackage 'gridExtra' successfully unpacked and MD5 sums checked\npackage 'polynom' successfully unpacked and MD5 sums checked\npackage 'rstatix' successfully unpacked and MD5 sums checked\npackage 'ggpubr' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n    C:\\Users\\ngbtp\\AppData\\Local\\Temp\\Rtmp6XA1JA\\downloaded_packages\n\n\n\nggpubr installed\n\n\nInstalling package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'\n(as 'lib' is unspecified)\n\n\nalso installing the dependencies 'estimability', 'viridis', 'DT', 'ellipse', 'emmeans', 'flashClust', 'leaps', 'scatterplot3d', 'dendextend', 'FactoMineR'\n\n\nWarning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:\n  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'\n\n\npackage 'estimability' successfully unpacked and MD5 sums checked\npackage 'viridis' successfully unpacked and MD5 sums checked\npackage 'DT' successfully unpacked and MD5 sums checked\npackage 'ellipse' successfully unpacked and MD5 sums checked\npackage 'emmeans' successfully unpacked and MD5 sums checked\npackage 'flashClust' successfully unpacked and MD5 sums checked\npackage 'leaps' successfully unpacked and MD5 sums checked\npackage 'scatterplot3d' successfully unpacked and MD5 sums checked\npackage 'dendextend' successfully unpacked and MD5 sums checked\npackage 'FactoMineR' successfully unpacked and MD5 sums checked\npackage 'factoextra' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n    C:\\Users\\ngbtp\\AppData\\Local\\Temp\\Rtmp6XA1JA\\downloaded_packages\n\n\n\nfactoextra installed\n\n\nInstalling package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'\n(as 'lib' is unspecified)\n\n\nWarning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:\n  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'\n\n\npackage 'NbClust' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n    C:\\Users\\ngbtp\\AppData\\Local\\Temp\\Rtmp6XA1JA\\downloaded_packages\n\n\n\nNbClust installed\nInstalling package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'\n(as 'lib' is unspecified)\n\n\nalso installing the dependencies 'permute', 'ca', 'gclus', 'qap', 'registry', 'TSP', 'vegan', 'plotly', 'seriation', 'webshot', 'assertthat', 'egg'\n\n\nWarning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:\n  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'\n\n\npackage 'permute' successfully unpacked and MD5 sums checked\npackage 'ca' successfully unpacked and MD5 sums checked\npackage 'gclus' successfully unpacked and MD5 sums checked\npackage 'qap' successfully unpacked and MD5 sums checked\npackage 'registry' successfully unpacked and MD5 sums checked\npackage 'TSP' successfully unpacked and MD5 sums checked\npackage 'vegan' successfully unpacked and MD5 sums checked\npackage 'plotly' successfully unpacked and MD5 sums checked\npackage 'seriation' successfully unpacked and MD5 sums checked\npackage 'webshot' successfully unpacked and MD5 sums checked\npackage 'assertthat' successfully unpacked and MD5 sums checked\npackage 'egg' successfully unpacked and MD5 sums checked\npackage 'heatmaply' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n    C:\\Users\\ngbtp\\AppData\\Local\\Temp\\Rtmp6XA1JA\\downloaded_packages\n\n\n\nheatmaply installed\n\n\nInstalling package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'\n(as 'lib' is unspecified)\n\n\nalso installing the dependency 'ggstats'\n\n\nWarning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:\n  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'\n\n\npackage 'ggstats' successfully unpacked and MD5 sums checked\npackage 'GGally' successfully unpacked and MD5 sums checked\n\nThe downloaded binary packages are in\n    C:\\Users\\ngbtp\\AppData\\Local\\Temp\\Rtmp6XA1JA\\downloaded_packages\n\n\n\nGGally installed"
   }
 ]

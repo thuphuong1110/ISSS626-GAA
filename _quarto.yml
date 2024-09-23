@@ -23,6 +23,8 @@ website:
           href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex051.html"
         - text: "5.2 - Local Measures of Spatial Autocorrelation"
           href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex052.html"
+        - text: "6.1 - Geographical Segmentation with Spatially Constrained Clustering Techniques"
+          href: "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html"
       - text: "In-class Exercise"
         menu: 
         - text: "1 - Geospatial Data Analysis with R"
@@ -33,6 +35,8 @@ website:
           href: In-class_Ex/In-class_Ex03/In-class_Ex03.html
         - text: "4 - Geographically Weighted Summary Statistics"
           href: In-class_Ex/In-class_Ex04/In-class_Ex04.html
+        - text: "5 - Global and Local Measures of Spatial Autocorrelation"
+          href: In-class_Ex/In-class_Ex05/In-class_Ex05.html
       - text: "Take-home Exercise"
         menu: 
         - text: "1 - Geospatial Analytics for Public Good"

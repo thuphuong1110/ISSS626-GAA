@@ -7,8 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Nguyen Bao Thu Phuong">
+<meta name="dcterms.date" content="2024-09-25">
 
-<title>ISSS626-GAA - Geospatial Analytics and Application (ISSS626)</title>
+<title>ISSS626-GAA - Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -21,26 +22,60 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<script src="site_libs/quarto-html/quarto.js"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
-<script src="site_libs/quarto-contrib/iconify-2.1.0/iconify-icon.min.js"></script>
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="../../site_libs/quarto-contrib/iconify-2.1.0/iconify-icon.min.js"></script>
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -70,7 +105,7 @@ ul.task-list li input[type="checkbox"] {
 }</script>
 
 
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="../../styles.css">
 </head>
 
 <body class="nav-fixed">
@@ -80,7 +115,7 @@ ul.task-list li input[type="checkbox"] {
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a class="navbar-brand" href="./index.html">
+    <a class="navbar-brand" href="../../index.html">
     <span class="navbar-title">ISSS626-GAA</span>
     </a>
   </div>
@@ -96,40 +131,36 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-hands-on-exercise">    
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex011.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex011.html">
  <span class="dropdown-text">1.1 - Geospatial Data Wrangling with R</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex012.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex01/Hands-on_Ex012.html">
  <span class="dropdown-text">1.2 - Choropleth Mapping with R</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex021.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex021.html">
  <span class="dropdown-text">2.1 - 1st Order Spatial Point Patterns Analysis Methods</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex022.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex02/Hands-on_Ex022.html">
  <span class="dropdown-text">2.2 - 2nd Order Spatial Point Patterns Analysis Methods</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex031.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex03/Hands-on_Ex031.html">
  <span class="dropdown-text">3.1 - Network Constrained Spatial Point Patterns Analysis</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex04/Hands-on_Ex041.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex04/Hands-on_Ex041.html">
  <span class="dropdown-text">4.1 - Spatial Weights and Applications</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex051.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex051.html">
  <span class="dropdown-text">5.1 - Global Measures of Spatial Autocorrelation</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex052.html">
+    <a class="dropdown-item" href="../../Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex052.html">
  <span class="dropdown-text">5.2 - Local Measures of Spatial Autocorrelation</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html">
- <span class="dropdown-text">6.1 - Geographical Segmentation with Spatially Constrained Clustering Techniques</span></a>
   </li>  
     </ul>
   </li>
@@ -139,24 +170,20 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-in-class-exercise">    
         <li>
-    <a class="dropdown-item" href="./In-class_Ex/In-class_Ex01/In-class_Ex01.html">
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex01/In-class_Ex01.html">
  <span class="dropdown-text">1 - Geospatial Data Analysis with R</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./In-class_Ex/In-class_Ex02/In-class_Ex02.html">
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex02/In-class_Ex02.html">
  <span class="dropdown-text">2 - Spatial Point Pattern Analysis</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./In-class_Ex/In-class_Ex03/In-class_Ex03.html">
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex03/In-class_Ex03.html">
  <span class="dropdown-text">3 - Network Constrained Spatial Point Patterns Analysis</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./In-class_Ex/In-class_Ex04/In-class_Ex04.html">
+    <a class="dropdown-item" href="../../In-class_Ex/In-class_Ex04/In-class_Ex04.html">
  <span class="dropdown-text">4 - Geographically Weighted Summary Statistics</span></a>
-  </li>  
-        <li>
-    <a class="dropdown-item" href="./In-class_Ex/In-class_Ex05/In-class_Ex05.html">
- <span class="dropdown-text">5 - Global and Local Measures of Spatial Autocorrelation</span></a>
   </li>  
     </ul>
   </li>
@@ -166,7 +193,7 @@ ul.task-list li input[type="checkbox"] {
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-take-home-exercise">    
         <li>
-    <a class="dropdown-item" href="./Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html">
+    <a class="dropdown-item" href="../../Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html">
  <span class="dropdown-text">1 - Geospatial Analytics for Public Good</span></a>
   </li>  
     </ul>
@@ -174,7 +201,7 @@ ul.task-list li input[type="checkbox"] {
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="./index.html" aria-current="page"> 
+    <a class="nav-link" href="../../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
@@ -197,8 +224,14 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#welcome-to-my-geospatial-analytics-learning-journey" id="toc-welcome-to-my-geospatial-analytics-learning-journey" class="nav-link active" data-scroll-target="#welcome-to-my-geospatial-analytics-learning-journey"><span class="header-section-number">1</span> Welcome to my Geospatial Analytics Learning Journey</a></li>
-  <li><a href="#website-sections" id="toc-website-sections" class="nav-link" data-scroll-target="#website-sections"><span class="header-section-number">2</span> Website Sections</a></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview"><span class="header-section-number">1</span> Overview</a></li>
+  <li><a href="#getting-started" id="toc-getting-started" class="nav-link" data-scroll-target="#getting-started"><span class="header-section-number">2</span> <strong>Getting Started</strong></a>
+  <ul class="collapse">
+  <li><a href="#the-analytical-question" id="toc-the-analytical-question" class="nav-link" data-scroll-target="#the-analytical-question"><span class="header-section-number">2.1</span> The Analytical Question</a></li>
+  <li><a href="#the-data" id="toc-the-data" class="nav-link" data-scroll-target="#the-data"><span class="header-section-number">2.2</span> The data</a></li>
+  <li><a href="#install-and-load-r-packages" id="toc-install-and-load-r-packages" class="nav-link" data-scroll-target="#install-and-load-r-packages"><span class="header-section-number">2.3</span> Install and Load R Packages</a></li>
+  </ul></li>
+  <li><a href="#data-import-and-prepatation" id="toc-data-import-and-prepatation" class="nav-link" data-scroll-target="#data-import-and-prepatation"><span class="header-section-number">3</span> Data Import and Prepatation</a></li>
   </ul>
 </nav>
     </div>
@@ -207,7 +240,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Geospatial Analytics and Application (ISSS626)</h1>
+<h1 class="title">Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques</h1>
 </div>
 
 
@@ -221,7 +254,19 @@ ul.task-list li input[type="checkbox"] {
           </div>
   </div>
     
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 25, 2024</p>
+    </div>
+  </div>
   
+    <div>
+    <div class="quarto-title-meta-heading">Modified</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date-modified">September 23, 2024</p>
+    </div>
+  </div>
     
   </div>
   
@@ -230,49 +275,200 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="welcome-to-my-geospatial-analytics-learning-journey" class="level1" data-number="1">
-<h1 data-number="1"><span class="header-section-number">1</span> Welcome to my Geospatial Analytics Learning Journey</h1>
-<p>Hello there! I am Phuong. Welcome to my <strong>ISSS626 Geospatial Analysis and Application</strong> homepage. This course is taught by Prof <a href="https://faculty.smu.edu.sg/profile/kam-tin-seong-486">KAM Tin Seong</a> as part of my <a href="https://masters.smu.edu.sg/programme/master-of-it-in-business">Master of IT in Business program</a> at Singapore Management University. In this website, you will find my coursework prepared for this course, encompassing practical application of different techniques to transform and analyze spatial data.</p>
-</section>
-<section id="website-sections" class="level1" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> Website Sections</h1>
-<p>The coursework is divided into 3 main sections:</p>
-<div>
-
-</div>
-<div class="quarto-layout-panel" data-layout="[1,1,1]">
-<div class="quarto-layout-row quarto-layout-valign-bottom">
-<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="Illustration/at_home_coding_crop.jpg" class="img-fluid figure-img"></p>
-<figcaption><strong>Hands-on Exercise</strong></figcaption>
-</figure>
-</div>
-</div>
-<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="Illustration/photo3_crop.png" class="img-fluid figure-img"></p>
-<figcaption><strong>In-class Exercise</strong></figcaption>
-</figure>
-</div>
-</div>
-<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="Illustration/photo1.png" class="img-fluid figure-img"></p>
-<figcaption><strong>Take-home Exercise</strong></figcaption>
-</figure>
-</div>
-</div>
-</div>
-</div>
+<section id="overview" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Overview</h1>
+<p>In this exercise, we explore how to delineate homogeneous regions using geographically referenced multivariate data through two analyses:</p>
 <ul>
-<li><p><strong>Hands-on Exercise</strong>: Hands-on practice under the guidance given by Prof Kam, using relevant R packages to perform geospatial analysis using public data sources.</p></li>
-<li><p><strong>In-class Exercise</strong>: Extend from the methods learned through Hands-on Exercise and include analysis result communication through data visualization.</p></li>
-<li><p><strong>Take-home Exercise</strong>: <strong>Synthesize learning</strong> from course materials and above exercises to analyze real-world geospatial cases.</p></li>
+<li><p>Hierarchical cluster analysis</p></li>
+<li><p>Spatially constrained cluster analysis.</p></li>
 </ul>
+<p>The below techniques will be covered in this exercise:</p>
+<ul>
+<li><p>Convert GIS polygon data to R’s simple feature data.frame using the <code>sf</code> package.</p></li>
+<li><p>Convert simple feature data.frame to R’s SpatialPolygonDataFrame object using <code>sf</code>.</p></li>
+<li><p>Perform cluster analysis with <code>hclust()</code> in Base R.</p></li>
+<li><p>Conduct spatially constrained cluster analysis with <code>skater()</code> in Base R.</p></li>
+<li><p>Visualize analysis output using <code>ggplot2</code> and <code>tmap</code>.</p></li>
+</ul>
+</section>
+<section id="getting-started" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> <strong>Getting Started</strong></h1>
+<section id="the-analytical-question" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="the-analytical-question"><span class="header-section-number">2.1</span> The Analytical Question</h2>
+<p>In geobusiness and spatial policy, it’s common to delineate areas into homogeneous regions using multivariate data. This exercise focuses on delineating Shan State, Myanmar, using multiple ICT measures: Radio, Television, Landline phone, Mobile phone, Computer, and Internet at home.</p>
+</section>
+<section id="the-data" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="the-data"><span class="header-section-number">2.2</span> The data</h2>
+<p>Two datasets will be used:</p>
+<ul>
+<li><p><strong>Myanmar Township Boundary Data</strong>: GIS data in ESRI shapefile format with township boundary information.</p></li>
+<li><p><strong>Shan-ICT.csv</strong>: Extract from the <a href="https://myanmar.unfpa.org/en/publications/2014-population-and-housing-census-myanmar-data-sheet">2014 Myanmar Population and Housing Census</a> at the township level.</p></li>
+</ul>
+<p>Both datasets are from the <a href="https://themimu.info/">Myanmar Information Management Unit (MIMU)</a>.</p>
+</section>
+<section id="install-and-load-r-packages" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="install-and-load-r-packages"><span class="header-section-number">2.3</span> Install and Load R Packages</h2>
+<p>We install and load the necessary R packages using below code chunk:</p>
+<ul>
+<li><p>Spatial data handling: <code>sf</code>, <code>rgdal</code>, <code>spdep</code></p></li>
+<li><p>Attribute data handling: <code>tidyverse</code> (includes <code>readr</code>, <code>ggplot2</code>, <code>dplyr</code>)</p></li>
+<li><p>Choropleth mapping: <code>tmap</code></p></li>
+<li><p>Multivariate data visualization and analysis: <code>corrplot</code>, <code>ggpubr</code>, <code>heatmaply</code></p></li>
+<li><p>Cluster analysis: <code>cluster</code>, <code>ClustGeo</code></p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(spdep, tmap, sf, ClustGeo, </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>               ggpubr, cluster, factoextra, NbClust,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>               heatmaply, corrplot, psych, tidyverse, GGally)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Installing package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'
+(as 'lib' is unspecified)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:
+  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>package 'ClustGeo' successfully unpacked and MD5 sums checked
+
+The downloaded binary packages are in
+    C:\Users\ngbtp\AppData\Local\Temp\Rtmp6XA1JA\downloaded_packages</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+ClustGeo installed
+Installing package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'
+(as 'lib' is unspecified)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>also installing the dependencies 'corrplot', 'ggsci', 'gridExtra', 'polynom', 'rstatix'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:
+  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>package 'corrplot' successfully unpacked and MD5 sums checked
+package 'ggsci' successfully unpacked and MD5 sums checked
+package 'gridExtra' successfully unpacked and MD5 sums checked
+package 'polynom' successfully unpacked and MD5 sums checked
+package 'rstatix' successfully unpacked and MD5 sums checked
+package 'ggpubr' successfully unpacked and MD5 sums checked
+
+The downloaded binary packages are in
+    C:\Users\ngbtp\AppData\Local\Temp\Rtmp6XA1JA\downloaded_packages</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+ggpubr installed</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Installing package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'
+(as 'lib' is unspecified)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>also installing the dependencies 'estimability', 'viridis', 'DT', 'ellipse', 'emmeans', 'flashClust', 'leaps', 'scatterplot3d', 'dendextend', 'FactoMineR'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:
+  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>package 'estimability' successfully unpacked and MD5 sums checked
+package 'viridis' successfully unpacked and MD5 sums checked
+package 'DT' successfully unpacked and MD5 sums checked
+package 'ellipse' successfully unpacked and MD5 sums checked
+package 'emmeans' successfully unpacked and MD5 sums checked
+package 'flashClust' successfully unpacked and MD5 sums checked
+package 'leaps' successfully unpacked and MD5 sums checked
+package 'scatterplot3d' successfully unpacked and MD5 sums checked
+package 'dendextend' successfully unpacked and MD5 sums checked
+package 'FactoMineR' successfully unpacked and MD5 sums checked
+package 'factoextra' successfully unpacked and MD5 sums checked
+
+The downloaded binary packages are in
+    C:\Users\ngbtp\AppData\Local\Temp\Rtmp6XA1JA\downloaded_packages</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+factoextra installed</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Installing package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'
+(as 'lib' is unspecified)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:
+  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>package 'NbClust' successfully unpacked and MD5 sums checked
+
+The downloaded binary packages are in
+    C:\Users\ngbtp\AppData\Local\Temp\Rtmp6XA1JA\downloaded_packages</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+NbClust installed
+Installing package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'
+(as 'lib' is unspecified)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>also installing the dependencies 'permute', 'ca', 'gclus', 'qap', 'registry', 'TSP', 'vegan', 'plotly', 'seriation', 'webshot', 'assertthat', 'egg'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:
+  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>package 'permute' successfully unpacked and MD5 sums checked
+package 'ca' successfully unpacked and MD5 sums checked
+package 'gclus' successfully unpacked and MD5 sums checked
+package 'qap' successfully unpacked and MD5 sums checked
+package 'registry' successfully unpacked and MD5 sums checked
+package 'TSP' successfully unpacked and MD5 sums checked
+package 'vegan' successfully unpacked and MD5 sums checked
+package 'plotly' successfully unpacked and MD5 sums checked
+package 'seriation' successfully unpacked and MD5 sums checked
+package 'webshot' successfully unpacked and MD5 sums checked
+package 'assertthat' successfully unpacked and MD5 sums checked
+package 'egg' successfully unpacked and MD5 sums checked
+package 'heatmaply' successfully unpacked and MD5 sums checked
+
+The downloaded binary packages are in
+    C:\Users\ngbtp\AppData\Local\Temp\Rtmp6XA1JA\downloaded_packages</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+heatmaply installed</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Installing package into 'C:/Users/ngbtp/AppData/Local/R/win-library/4.4'
+(as 'lib' is unspecified)</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>also installing the dependency 'ggstats'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: unable to access index for repository http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4:
+  cannot open URL 'http://www.stats.ox.ac.uk/pub/RWin/bin/windows/contrib/4.4/PACKAGES'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>package 'ggstats' successfully unpacked and MD5 sums checked
+package 'GGally' successfully unpacked and MD5 sums checked
+
+The downloaded binary packages are in
+    C:\Users\ngbtp\AppData\Local\Temp\Rtmp6XA1JA\downloaded_packages</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+GGally installed</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="data-import-and-prepatation" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Data Import and Prepatation</h1>
 
 
 </section>

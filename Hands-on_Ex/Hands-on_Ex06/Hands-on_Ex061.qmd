@@ -1,0 +1,69 @@
+---
+title: "Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques"
+author: "Nguyen Bao Thu Phuong"
+date: "25 September 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Overview
+
+In this exercise, we explore how to delineate homogeneous regions using geographically referenced multivariate data through two analyses:
+
+-   Hierarchical cluster analysis
+
+-   Spatially constrained cluster analysis.
+
+The below techniques will be covered in this exercise:
+
+-   Convert GIS polygon data to R’s simple feature data.frame using the `sf` package.
+
+-   Convert simple feature data.frame to R’s SpatialPolygonDataFrame object using `sf`.
+
+-   Perform cluster analysis with `hclust()` in Base R.
+
+-   Conduct spatially constrained cluster analysis with `skater()` in Base R.
+
+-   Visualize analysis output using `ggplot2` and `tmap`.
+
+# **Getting Started**
+
+## The Analytical Question
+
+In geobusiness and spatial policy, it’s common to delineate areas into homogeneous regions using multivariate data. This exercise focuses on delineating Shan State, Myanmar, using multiple ICT measures: Radio, Television, Landline phone, Mobile phone, Computer, and Internet at home.
+
+## The data
+
+Two datasets will be used:
+
+-   **Myanmar Township Boundary Data**: GIS data in ESRI shapefile format with township boundary information.
+
+-   **Shan-ICT.csv**: Extract from the [2014 Myanmar Population and Housing Census](https://myanmar.unfpa.org/en/publications/2014-population-and-housing-census-myanmar-data-sheet) at the township level.
+
+Both datasets are from the [Myanmar Information Management Unit (MIMU)](https://themimu.info/).
+
+## Install and Load R Packages
+
+We install and load the necessary R packages using below code chunk:
+
+-   Spatial data handling: `sf`, `rgdal`, `spdep`
+
+-   Attribute data handling: `tidyverse` (includes `readr`, `ggplot2`, `dplyr`)
+
+-   Choropleth mapping: `tmap`
+
+-   Multivariate data visualization and analysis: `corrplot`, `ggpubr`, `heatmaply`
+
+-   Cluster analysis: `cluster`, `ClustGeo`
+
+```{r}
+pacman::p_load(spdep, tmap, sf, ClustGeo, 
+               ggpubr, cluster, factoextra, NbClust,
+               heatmaply, corrplot, psych, tidyverse, GGally)
+```
+
+# Data Import and Prepatation
