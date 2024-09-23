@@ -20,6 +20,16 @@ In this hands-on exercise, we explore how to use the spNetwork package to:
 
 -   Perform network G-function and K-function analysis.
 
+# The Data
+
+In this study, we aim to analyze the spatial distribution of childcare centers within the Punggol planning area. To achieve this, we will utilize two specific geospatial datasets:
+
+1.  **Punggol_St**: consists of line features representing the road network within the Punggol planning area.
+
+2.  **Punggol_CC**: comprises point features indicating the locations of childcare centers within the same area.
+
+Both datasets are provided in the ESRI shapefile format.
+
 # Install and launch R packages
 
 Below code chunk install and launch the four R packages
@@ -44,16 +54,34 @@ childcare <- st_read(dsn="data/geospatial",
         what = "ZM")
 ```
 
+The below code chunk below can be used to print the content of network and childcare simple features objects.
+
+::: panel-tabset
+## Childcare
+
+```{r}
+childcare
+```
+
+## Network
+
+```{r}
+network
+```
+:::
+
+**Note** : spNetwork's function expects the geospatial data to contain complete CRS information.
+
 # Visualize Geospatial Data
 
-Use plot() function of Base R
+Before diving into the analysis, it’s beneficial to visualize the geospatial data. There are at least two methods to achieve this. One approach is to use the plot() function from Base R, as demonstrated in the code snippet below.
 
 ```{r}
 plot(st_geometry(network))
 plot(childcare,add=T,col='red',pch = 19) # add = True: overlay the points on the currently open window screen
 ```
 
-Use **tmap** package to plot
+To visualise the geospatial data with high cartographic quality and interactive manner, the mapping function of **tmap** package can be used as shown in the code chunk below.
 
 ```{r}
 tmap_mode("view")
@@ -82,7 +110,7 @@ The followings are observed from the above code chunk.
 
 -   The length of each lixel (*lx_length*) is set to 700 meters. This is a reasonable walking distance for parents/grandparents to walk their kids to the childcare centre.
 
--   The minimum length of a lixel (*mindist*) is set to 375 meters.
+-   The minimum length of a lixel (*mindist*) is set to 350 meters.
 
 After cutting, if the length of the final lixel is shorter than the minimum distance, it is merged with the previous lixel. If *mindist* = NULL, then it defaults to maxdist/10. Segments that are already shorter than the minimum distance are left unmodified.
 
@@ -111,7 +139,7 @@ tmap_mode("plot")
 
 ## Perform NKDE
 
-the NKDE is computing using below code chunk.
+The NKDE is computed using below code chunk.
 
 ```{r}
 densities <- nkde(network, 
@@ -145,7 +173,7 @@ densities <- nkde(network,
 
 It is recommended to read the spNetwork package user guide for a deeper understanding of the various parameters available for calibrating the NKDE model.
 
-### Visualize NKDE
+## Visualize NKDE
 
 Before visualizing the NKDE values, the code chunk below inserts the computed density values (`densities`) into the `samples` and `lixels` objects as a new density field.
 
@@ -172,6 +200,8 @@ tm_shape(childcare)+
   tm_dots()
 tmap_mode('plot')
 ```
+
+The interactive map above effectively reveals road segments with relatively higher density of childcare centres (darker color) than road segments with relatively lower density of childcare centres (lighter color).
 
 # Network Constrained G- and K-Function Analysis
 
@@ -237,3 +267,5 @@ Next we plot the g-function.
 ```{r}
 kfun_childcare$plotg
 ```
+
+The blue line is the empirical network G-function of the childcare centres in Punggol planning area. The gray envelop represents the results of the 50 simulations in the confidence interval 2.5% - 97.5%. Since the blue line segment between the distance 125m-150m is below the gray area, we can infer that the childcare centres in Punggol planning area resemble regular pattern at the distance of 125m-150m.
