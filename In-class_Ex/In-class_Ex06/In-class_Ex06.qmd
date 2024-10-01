@@ -1,0 +1,219 @@
+---
+title: "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)"
+author: "Nguyen Bao Thu Phuong"
+date: "30 September 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Overview
+
+Emerging Hot Spot Analysis (EHSA) is a spatial-temporal analysis method to reveal and describe how hot spot and cold spot areas evolve over time. The analysis consist of 4 main steps:
+
+-   Build a space-time cube
+
+-   Calculate Getis-Ord local Gi\* statistics for each bin using and FDR correction
+
+-   Evaluate these hot and cold spot trends using Mann-Kendall trend test
+
+-   Categorize each study area location by referring to the result trend z-score and hot spot z-score and p-value for each bin.
+
+# Getting Started
+
+## Install and Load R packages
+
+`p_load()` of **pacman** package is used to install the necessary R packages.
+
+```{r}
+pacman::p_load(sf, sfdep, tmap, plotly, tidyverse)
+```
+
+Next we set the seed to ensure reproducibility of the result.
+
+```{r}
+set.seed(1234)
+```
+
+## The Data
+
+The code chunk below use st_read() of sf package to import Hunan shapefile into R
+
+```{r}
+hunan = st_read(dsn = "data/geospatial",
+                layer = "Hunan")
+```
+
+The attribute table is loaded in using `read_csv()`.
+
+```{r}
+GDPPC = read_csv("data/aspatial/Hunan_GDPPC.csv")
+```
+
+# Create a time-series cube
+
+The space-time cube should be created on a fixed spatial entity region, only the attribute (the time) should change.
+
+The code chunk below uses spacetime() og sfdep to create an spatio-temporal cube.
+
+```{r}
+GDPPC_st = spacetime(GDPPC, hunan,
+                     .loc_col = "County",
+                     .time_col = "Year")
+```
+
+The `.time_col` require the data in integer format (need to convert the date or month into integer or drop the time component if it's a datetime column).
+
+Next `is_spacetime_cube()` of sfdep is used to verify if GDPPC_st is indeed an space-time cube object.
+
+```{r}
+is_spacetime_cube(GDPPC_st)
+```
+
+# Compute Gi\*
+
+Next we comput the local Gi\* statistics.
+
+## Derive the spatial weights
+
+The code chunk below is used to identify neighbors and derive an inverse distance weights.
+
+```{r}
+GDPPC_nb = GDPPC_st |>
+  activate("geometry") |>
+  mutate(nb = include_self(
+    st_contiguity(geometry)),
+    wt = st_inverse_distance(nb,
+                              geometry,
+                              scale = 1,
+                              alpha = 1),
+                             .before = 1) |>
+      set_nbs("nb") |>
+      set_wts("wt")
+```
+
+## Compute Gi\*
+
+We use these new columns to manually calculate the local Gi\* for each location. This is done using `group_by` Year and `local_gstar_perm()` of **sfdep** package. Afterwards, `unnest()` is used to unnest `gi_star` column of the newly created gi_stars data.frame.
+
+```{r}
+gi_stars = GDPPC_nb |>
+  group_by(Year) |>
+  mutate(gi_star = local_gstar_perm(
+    GDPPC, nb, wt)) |>
+  tidyr::unnest(gi_star)
+```
+
+# Mann-Kendall Test
+
+A monotonic series or function is one that only increases (or decreases) and never changes direction. So long as the function either stay flat or continues to increase, it is considered monotonic.
+
+With these Gi\* measures we can evaluate each location for a trend using the Mann-Kendall test. The code chunk below evaluates Changsha county
+
+```{r}
+cbg = gi_stars |>
+  ungroup() |>
+  filter(County == "Changsha") |>
+  select(County, Year, gi_star)
+```
+
+## Interactive Mann-Kendall plot
+
+Next we plot the result using ggplot2 functions.
+
+```{r}
+ggplot(data = cbg,
+       aes(x = Year,
+           y = gi_star)) +
+  geom_line() +
+  theme_light()
+```
+
+We can also create an interactive plot using `ggplotly()` of **plotly** package.
+
+```{r}
+p = ggplot(data = cbg,
+           aes(x = Year,
+               y = gi_star)) +
+  geom_line() +
+  theme_light()
+
+ggplotly(p)
+```
+
+## Print Mann-Kendall test report
+
+```{r}
+cbg |>
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) |>
+  tidyr::unnest_wider(mk)
+```
+
+In the above output, sl is the p-value. As the p-value is smaller than 0.05, we reject the null hypothesis and infer that a slight upward trend is present.
+
+## Mann-Kendall test data.frame
+
+We can replicate this for each location using `group_by()` of **dplyr** package.
+
+```{r}
+ehsa = gi_stars |>
+  group_by(County) |>
+  summarise(mk = list(
+    unclass(
+      Kendall::MannKendall(gi_star)))) |>
+  tidyr::unnest_wider(mk)
+head(ehsa)
+```
+
+We can also sort to show significant emerging hot/cold spots.
+
+```{r}
+
+```
+
+# Perform Emerging Hotspot Analysis
+
+Lastly, we perform EHSA using emerging_hotspot-analysis() of sfdep package. It takes a space-time object and the quoted name of the variable.
+
+```{r}
+ehsa = emerging_hotspot_analysis(
+  x = GDPPC_st,
+  .var = "GDPPC",
+  k = 1, nsim = 99)
+```
+
+# Visualize the distribution of EHSA classes
+
+The code chunk below uses ggplot2 functions to reveal the distribution of EHSA classes as a bar chart.
+
+```{r}
+ggplot(data = ehsa,
+       aes(x = classification)) +
+  geom_bar()
+```
+
+# Visualize EHSA
+
+```{r}
+hunan_ehsa = hunan |>
+  left_join(ehsa,
+            by = join_by(County == location))
+```
+
+Next tmap functions is used to plot a categorical choropleth map using the below code chunk.
+
+```{r}
+ehsa_sig = hunan_ehsa |>
+  filter(p_value < 0.05)
+tm_shape(hunan_ehsa) +
+  tm_polygons() +
+  tm_borders(alpha = 0.5) +
+  tm_shape(ehsa_sig) +
+  tm_fill("classification") +
+  tm_borders(alpha = 0.4)
+```

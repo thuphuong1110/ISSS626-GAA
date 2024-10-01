@@ -1335,5 +1335,61 @@
     "title": "Hands-on Exercise 6.1: Geographical Segmentation with Spatially Constrained Clustering Techniques",
     "section": "9.2 Multivariate Visualisation",
     "text": "9.2 Multivariate Visualisation\nPast studies shown that parallel coordinate plot can be used to reveal clustering variables by cluster very effectively. In the code chunk below, ggparcoord() of GGally package is used.\n\nggparcoord(data = shan_sf_ngeo_cluster, \n           columns = c(17:21), \n           scale = \"globalminmax\",\n           alphaLines = 0.2,\n           boxplot = TRUE, \n           title = \"Multiple Parallel Coordinates Plots of ICT Variables by Cluster\") +\n  facet_grid(~ CLUSTER) + \n  theme(axis.text.x = element_text(angle = 30))\n\n\n\n\n\n\n\n\nThe parallel coordinate plot shows that households in Cluster 4 townships have the highest ownership of TVs and mobile phones, while those in Cluster 5 have the lowest ownership of all five ICTs.\nThe scale argument in ggparcoord() offers several methods to scale clustering variables:\n\nstd: Subtract mean and divide by standard deviation.\nrobust: Subtract median and divide by median absolute deviation.\nuniminmax: Scale so the minimum is zero and the maximum is one.\nglobalminmax: No scaling; the range is defined by the global minimum and maximum.\ncenter: Standardize vertical height using uniminmax, then center each variable at a specified value.\ncenterObs: Standardize vertical height using uniminmax, then center each variable at the value of a specified observation.\n\nThere is no single best scaling method; choose the one that best suits your analysis needs.\nAdditionally, you can compute summary statistics (mean, median, standard deviation, etc.) to complement the visual interpretation.\nThe code below uses group_by() and summarise() from dplyr to derive mean values of the clustering variables:\n\nshan_sf_ngeo_cluster %&gt;% \n  st_set_geometry(NULL) %&gt;%\n  group_by(CLUSTER) %&gt;%\n  summarise(mean_RADIO_PR = mean(RADIO_PR),\n            mean_TV_PR = mean(TV_PR),\n            mean_LLPHONE_PR = mean(LLPHONE_PR),\n            mean_MPHONE_PR = mean(MPHONE_PR),\n            mean_COMPUTER_PR = mean(COMPUTER_PR))\n\n# A tibble: 6 × 6\n  CLUSTER mean_RADIO_PR mean_TV_PR mean_LLPHONE_PR mean_MPHONE_PR\n  &lt;chr&gt;           &lt;dbl&gt;      &lt;dbl&gt;           &lt;dbl&gt;          &lt;dbl&gt;\n1 1               221.        521.            44.2           246.\n2 2               237.        402.            23.9           134.\n3 3               300.        611.            52.2           392.\n4 4               196.        744.            99.0           651.\n5 5               124.        224.            38.0           132.\n6 6                98.6       499.            74.5           468.\n# ℹ 1 more variable: mean_COMPUTER_PR &lt;dbl&gt;"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "",
+    "text": "Emerging Hot Spot Analysis (EHSA) is a spatial-temporal analysis method to reveal and describe how hot spot and cold spot areas evolve over time. The analysis consist of 4 main steps:\n\nBuild a space-time cube\nCalculate Getis-Ord local Gi* statistics for each bin using and FDR correction\nEvaluate these hot and cold spot trends using Mann-Kendall trend test\nCategorize each study area location by referring to the result trend z-score and hot spot z-score and p-value for each bin."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#install-and-load-r-packages",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#install-and-load-r-packages",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "2.1 Install and Load R packages",
+    "text": "2.1 Install and Load R packages\np_load() of pacman package is used to install the necessary R packages.\n\npacman::p_load(sf, sfdep, tmap, plotly, tidyverse)\n\nNext we set the seed to ensure reproducibility of the result.\n\nset.seed(1234)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#the-data",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#the-data",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "2.2 The Data",
+    "text": "2.2 The Data\nThe code chunk below use st_read() of sf package to import Hunan shapefile into R\n\nhunan = st_read(dsn = \"data/geospatial\",\n                layer = \"Hunan\")\n\nReading layer `Hunan' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\In-class_Ex\\In-class_Ex06\\data\\geospatial' \n  using driver `ESRI Shapefile'\nSimple feature collection with 88 features and 7 fields\nGeometry type: POLYGON\nDimension:     XY\nBounding box:  xmin: 108.7831 ymin: 24.6342 xmax: 114.2544 ymax: 30.12812\nGeodetic CRS:  WGS 84\n\n\nThe attribute table is loaded in using read_csv().\n\nGDPPC = read_csv(\"data/aspatial/Hunan_GDPPC.csv\")\n\nRows: 1496 Columns: 3\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (1): County\ndbl (2): Year, GDPPC\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#derive-the-spatial-weights",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#derive-the-spatial-weights",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "4.1 Derive the spatial weights",
+    "text": "4.1 Derive the spatial weights\nThe code chunk below is used to identify neighbors and derive an inverse distance weights.\n\nGDPPC_nb = GDPPC_st |&gt;\n  activate(\"geometry\") |&gt;\n  mutate(nb = include_self(\n    st_contiguity(geometry)),\n    wt = st_inverse_distance(nb,\n                              geometry,\n                              scale = 1,\n                              alpha = 1),\n                             .before = 1) |&gt;\n      set_nbs(\"nb\") |&gt;\n      set_wts(\"wt\")\n\n! Polygon provided. Using point on surface.\n\n\nWarning: There was 1 warning in `stopifnot()`.\nℹ In argument: `wt = st_inverse_distance(nb, geometry, scale = 1, alpha = 1)`.\nCaused by warning in `st_point_on_surface.sfc()`:\n! st_point_on_surface may not give correct results for longitude/latitude data"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#compute-gi-1",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#compute-gi-1",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "4.2 Compute Gi*",
+    "text": "4.2 Compute Gi*\nWe use these new columns to manually calculate the local Gi* for each location. This is done using group_by Year and local_gstar_perm() of sfdep package. Afterwards, unnest() is used to unnest gi_star column of the newly created gi_stars data.frame.\n\ngi_stars = GDPPC_nb |&gt;\n  group_by(Year) |&gt;\n  mutate(gi_star = local_gstar_perm(\n    GDPPC, nb, wt)) |&gt;\n  tidyr::unnest(gi_star)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#interactive-mann-kendall-plot",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#interactive-mann-kendall-plot",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "5.1 Interactive Mann-Kendall plot",
+    "text": "5.1 Interactive Mann-Kendall plot\nNext we plot the result using ggplot2 functions.\n\nggplot(data = cbg,\n       aes(x = Year,\n           y = gi_star)) +\n  geom_line() +\n  theme_light()\n\n\n\n\n\n\n\n\nWe can also create an interactive plot using ggplotly() of plotly package.\n\np = ggplot(data = cbg,\n           aes(x = Year,\n               y = gi_star)) +\n  geom_line() +\n  theme_light()\n\nggplotly(p)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#print-mann-kendall-test-report",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#print-mann-kendall-test-report",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "5.2 Print Mann-Kendall test report",
+    "text": "5.2 Print Mann-Kendall test report\n\ncbg |&gt;\n  summarise(mk = list(\n    unclass(\n      Kendall::MannKendall(gi_star)))) |&gt;\n  tidyr::unnest_wider(mk)\n\n# A tibble: 1 × 5\n    tau      sl     S     D  varS\n  &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;\n1 0.485 0.00742    66  136.  589.\n\n\nIn the above output, sl is the p-value. As the p-value is smaller than 0.05, we reject the null hypothesis and infer that a slight upward trend is present."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#mann-kendall-test-data.frame",
+    "href": "In-class_Ex/In-class_Ex06/In-class_Ex06.html#mann-kendall-test-data.frame",
+    "title": "In-class Exercise 6: Emerging Hot Spot Analysis (EHSA)",
+    "section": "5.3 Mann-Kendall test data.frame",
+    "text": "5.3 Mann-Kendall test data.frame\nWe can replicate this for each location using group_by() of dplyr package.\n\nehsa = gi_stars |&gt;\n  group_by(County) |&gt;\n  summarise(mk = list(\n    unclass(\n      Kendall::MannKendall(gi_star)))) |&gt;\n  tidyr::unnest_wider(mk)\nhead(ehsa)\n\n# A tibble: 6 × 6\n  County        tau        sl     S     D  varS\n  &lt;chr&gt;       &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;\n1 Anhua      0.191  0.303        26  136.  589.\n2 Anren     -0.294  0.108       -40  136.  589.\n3 Anxiang    0      1             0  136.  589.\n4 Baojing   -0.691  0.000128    -94  136.  589.\n5 Chaling   -0.0882 0.650       -12  136.  589.\n6 Changning -0.750  0.0000318  -102  136.  589.\n\n\nWe can also sort to show significant emerging hot/cold spots."
   }
 ]
