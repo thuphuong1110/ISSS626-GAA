@@ -26,7 +26,7 @@ website:
         - text: "6.1 - Geographical Segmentation with Spatially Constrained Clustering Techniques"
           href: "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html"
         - text: "7.1 - Calibrate Hedonic Pricing Model for Private Highrise Property"
-          href: "Hands-on_Ex/Hands-on_Ex07/Hands-on_Ex071.html"
+          href: "Hands-on_Ex/Hands-on_Ex07/Hands-on_Ex07.html"
       - text: "In-class Exercise"
         menu: 
         - text: "1 - Geospatial Data Analysis with R"
