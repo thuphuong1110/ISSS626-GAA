@@ -25,6 +25,8 @@ website:
           href: "Hands-on_Ex/Hands-on_Ex05/Hands-on_Ex052.html"
         - text: "6.1 - Geographical Segmentation with Spatially Constrained Clustering Techniques"
           href: "Hands-on_Ex/Hands-on_Ex06/Hands-on_Ex061.html"
+        - text: "7.1 - Calibrate Hedonic Pricing Model for Private Highrise Property"
+          href: "Hands-on_Ex/Hands-on_Ex07/Hands-on_Ex071.html"
       - text: "In-class Exercise"
         menu: 
         - text: "1 - Geospatial Data Analysis with R"
@@ -43,7 +45,7 @@ website:
         menu: 
         - text: "1 - Geospatial Analytics for Public Good"
           href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html"
-        - text: "2 - Discovering impacts of COVID-19 on Thailand tourism economy"
+        - text: "2 - Discovering impacts of COVID-19 on Thailand tourism economy using spatial and spatio-temporal statistics"
           href: "Take-home_Ex/Take-home_Ex02/Take-home_Ex02.html"
     right:
       - href: index.qmd
