@@ -1,0 +1,247 @@
+---
+title: "In-class Exercise 7: Calibrating Hedonic Pricing Model for Private Highrise Property with GWR Method"
+author: "Nguyen Bao Thu Phuong"
+date: "14 October 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Getting started
+
+## Import R packages
+
+First we import the relevant packages using p_load() of pacman.
+
+```{r}
+pacman::p_load(olsrr, corrplot, ggpubr, sf, spdep, GWmodel, tmap, tidyverse, gtsummary, ggstatsplot, sfdep)
+```
+
+## Import the Data
+
+```{r}
+condo_resale = read_csv("data/aspatial/Condo_resale_2015.csv")
+```
+
+```{r}
+mpsz = st_read(dsn = "data/geospatial", layer = "MP14_SUBZONE_WEB_PL") |>
+  st_transform(3414)
+```
+
+# Aspatial data wrangling
+
+## Convert aspatial data frame into an sf object
+
+```{r}
+condo_resale.sf <- st_as_sf(condo_resale,
+                            coords = c("LONGITUDE", "LATITUDE"),
+                            crs=4326) %>%
+  st_transform(crs=3414)
+```
+
+# Correlation Analysis
+
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+ggcorrmat(condo_resale[,5:23])
+```
+
+# Linear Regression
+
+The code chunk below uses `lm()` to calibrate a multiple linear regression model.
+
+```{r}
+condo.mlr <- lm(formula = SELLING_PRICE ~ AREA_SQM + AGE    + 
+                  PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE +
+                  PROX_URA_GROWTH_AREA + PROX_HAWKER_MARKET + PROX_KINDERGARTEN + 
+                  PROX_MRT  + PROX_PARK + PROX_PRIMARY_SCH + 
+                  PROX_TOP_PRIMARY_SCH + PROX_SHOPPING_MALL + PROX_SUPERMARKET + 
+                  PROX_BUS_STOP + NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD + LEASEHOLD_99YR, 
+                data=condo_resale.sf)
+summary(condo.mlr)
+```
+
+# Model Assessment: olsrr method
+
+```{r}
+ols_regress(condo.mlr)
+```
+
+The output shows that the `condo.mlr` model can explain close to 65% of the variation in the price.
+
+## Multicollinearity
+
+```{r}
+ols_vif_tol(condo.mlr)
+```
+
+The result shows that no variable has VIF great than 5. Dummy variables will not affect the overall calibration a lot, that is why although FREEHOLD and LEASEHOLE_99YR have multicollinearity (as they are dummy variables derived from the same variable), their VIFs are still lower than 5.
+
+## Variable Selection
+
+```{r}
+condo_fw_mlr = ols_step_forward_p(
+  condo.mlr,
+  p_val = 0.05,
+  details = FALSE)
+```
+
+```{r}
+#| fig-width: 12
+#| fig-height: 10
+plot(condo_fw_mlr)
+```
+
+## Test for Non-linearity
+
+```{r}
+ols_plot_resid_fit(condo_fw_mlr$model)
+```
+
+The figure above reveals that most of the points scatter around the 0 line.
+
+```{r}
+ols_plot_resid_hist(condo_fw_mlr$model)
+```
+
+```{r}
+ols_test_normality(condo_fw_mlr$model)
+```
+
+As the p-value is smaller than 0.05, we reject the null hypothesis that the model resembles normal distribution.
+
+## Residual normality test
+
+First we export the residuals of the hedonic pricing model and save it as a data frame.
+
+```{r}
+mlr_output = as.data.frame(condo_fw_mlr$model$residuals) |>
+  rename('FW_MLR_RES' = 'condo_fw_mlr$model$residuals')
+```
+
+Next we join the newly created data frame with `condo_resale_sf` object.
+
+```{r}
+condo_resale_sf = cbind(condo_resale.sf,
+                        mlr_output$FW_MLR_RES) |>
+  rename('MLR_RES' = 'mlr_output.FW_MLR_RES')
+```
+
+Next we use tmap to display the distribution of the residuals on an interactive map.
+
+```{r}
+tmap_mode("view")
+tm_shape(mpsz) +
+  tmap_options(check.and.fix = TRUE) + # to fix the issue in the mpsz layer
+  tm_polygons(alpha = 0.4) +
+  tm_shape(condo_resale_sf) +
+  tm_dots(col = "MLR_RES",
+          alpha = 0.6,
+          style = "quantile")
+tmap_mode("plot")
+```
+
+The map shows some high value clusters around the central region.
+
+The Moran's I test will be performed to prove our observations.
+
+```{r}
+condo_resale_sf = condo_resale_sf |>
+  mutate(nb = st_knn(geometry, k=6,
+                     longlat = FALSE),
+         wt = st_weights(nb,
+                         style = "W"),
+         .before = 1)
+```
+
+```{r}
+set.seed(1234)
+global_moran_perm(condo_resale_sf$MLR_RES,
+                  condo_resale_sf$nb,
+                  condo_resale_sf$wt,
+                  alternative = "two.sided",
+                  nsim = 99)
+```
+
+As the p-value is smaller than 0.05, we can reject the null hypothesis that the residuals are randomly distributed. Since the Moran I's statistic = 0.32254 \> 0, we can infer that the residuals resemble cluster distribution.
+
+# Build Fixed Bandwidth GWR model
+
+```{r}
+bw_fixed = bw.gwr(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE + PROX_URA_GROWTH_AREA + PROX_MRT + PROX_PARK + PROX_PRIMARY_SCH + PROX_SHOPPING_MALL + PROX_BUS_STOP + NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD,
+                  data = condo_resale_sf,
+                  approach = 'CV',
+                  kernel = 'gaussian',
+                  adaptive = FALSE,
+                  longlat = FALSE)
+```
+
+The result shows that the recommended bandwith is 971.3405 metres.
+
+## GWModel method - fixed bandwidth
+
+```{r}
+gwr_fixed = gwr.basic(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE + PROX_URA_GROWTH_AREA + PROX_MRT + PROX_PARK + PROX_PRIMARY_SCH + PROX_SHOPPING_MALL + PROX_BUS_STOP + NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD,
+                  data = condo_resale_sf,
+                  bw = bw_fixed,
+                  kernel = 'gaussian',
+                  longlat = FALSE)
+```
+
+```{r}
+gwr_fixed
+```
+
+The output shows that the adjust R-square improve quite a lot to 84.3% compared to the global model (64.7%).
+
+# Build adaptive bandwith GWR model
+
+```{r}
+bw_adaptive = bw.gwr(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE + PROX_URA_GROWTH_AREA + PROX_MRT + PROX_PARK + PROX_PRIMARY_SCH + PROX_SHOPPING_MALL + PROX_BUS_STOP + NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD,
+                  data = condo_resale_sf,
+                  approach = 'CV',
+                  kernel = 'gaussian',
+                  adaptive = TRUE,
+                  longlat = FALSE)
+```
+
+```{r}
+gwr_adaptive = gwr.basic(formula = SELLING_PRICE ~ AREA_SQM + AGE + PROX_CBD + PROX_CHILDCARE + PROX_ELDERLYCARE + PROX_URA_GROWTH_AREA + PROX_MRT + PROX_PARK + PROX_PRIMARY_SCH + PROX_SHOPPING_MALL + PROX_BUS_STOP + NO_Of_UNITS + FAMILY_FRIENDLY + FREEHOLD,
+                  data = condo_resale_sf,
+                  bw = bw_adaptive,
+                  adaptive = TRUE,
+                  kernel = 'gaussian',
+                  longlat = FALSE)
+```
+
+## Convert SDF into sf data.frame
+
+```{r}
+gwr_adaptive_output = as.data.frame(
+  gwr_adaptive$SDF) |>
+  select(-c(2:15))
+```
+
+```{r}
+gwr_sf_adaptive = cbind(condo_resale_sf,
+                        gwr_adaptive_output)
+```
+
+## Visualize Local R2
+
+```{r}
+tmap_mode("view")
+tm_shape(mpsz)+
+  tmap_options(check.and.fix = TRUE) +
+  tm_polygons(alpha = 0.1) +
+tm_shape(gwr_sf_adaptive) +  
+  tm_dots(col = "Local_R2",
+          border.col = "gray60",
+          border.lwd = 1) +
+  tm_view(set.zoom.limits = c(11,14))
+tmap_mode('plot')
+```
