@@ -57,7 +57,7 @@ GDPPC = read_csv("data/aspatial/Hunan_GDPPC.csv")
 
 The space-time cube should be created on a fixed spatial entity region, only the attribute (the time) should change.
 
-The code chunk below uses spacetime() og sfdep to create an spatio-temporal cube.
+The code chunk below uses `spacetime()` of sfdep to create an spatio-temporal cube.
 
 ```{r}
 GDPPC_st = spacetime(GDPPC, hunan,
@@ -95,6 +95,10 @@ GDPPC_nb = GDPPC_st |>
       set_wts("wt")
 ```
 
+In the above code chunk: The `activate()` function from the `dplyr` package is used to switch to the geometry context, while `mutate()` creates two new columns, `nb` and `wt`. Afterward, the data context is reactivated, and the `nb` and `wt` columns are copied to each time slice using `set_nbs()` and `set_wts()`. It's important not to change the row order after using these functions.
+
+Note that this dataset now has neighbors and weights for each time-slice.
+
 ## Compute Gi\*
 
 We use these new columns to manually calculate the local Gi\* for each location. This is done using `group_by` Year and `local_gstar_perm()` of **sfdep** package. Afterwards, `unnest()` is used to unnest `gi_star` column of the newly created gi_stars data.frame.
@@ -111,7 +115,21 @@ gi_stars = GDPPC_nb |>
 
 A monotonic series or function is one that only increases (or decreases) and never changes direction. So long as the function either stay flat or continues to increase, it is considered monotonic.
 
-With these Gi\* measures we can evaluate each location for a trend using the Mann-Kendall test. The code chunk below evaluates Changsha county
+-   H0: No monotonic trend
+
+-   H1: Monotonic trend is present
+
+**Interpretation**
+
+-   Reject the null-hypothesis if the p-value is smaller than alpha value
+
+-   Tau ranges between -1 and 1 where:
+
+    -   -1 is a perfectly decreasing series, and
+
+    -   1 is a perfectly increasing series.
+
+With these Gi\* measures we can evaluate each location for a trend using the Mann-Kendall test. The code chunk below evaluates Changsha county.
 
 ```{r}
 cbg = gi_stars |>
@@ -173,12 +191,15 @@ head(ehsa)
 We can also sort to show significant emerging hot/cold spots.
 
 ```{r}
-
+emerging <- ehsa %>% 
+  arrange(sl, abs(tau)) %>% 
+  slice(1:10)
+head(emerging)
 ```
 
 # Perform Emerging Hotspot Analysis
 
-Lastly, we perform EHSA using emerging_hotspot-analysis() of sfdep package. It takes a space-time object and the quoted name of the variable.
+Lastly, we perform EHSA using `emerging_hotspot_analysis()` of **sfdep** package. It takes a space-time object and the quoted name of the variable. The `k` argument is used to specify the number of time lags (set to 1 by default). Lastly, `nsim` defines number of simulations to be performed.
 
 ```{r}
 ehsa = emerging_hotspot_analysis(
@@ -197,7 +218,11 @@ ggplot(data = ehsa,
   geom_bar()
 ```
 
+The figure above indicates that the "sporadic cold spots" class has the highest number of counties.
+
 # Visualize EHSA
+
+In this section, you explore how to visualise the geographic distribution EHSA classes. First we need to join both `hunan` and `ehsa` together using the code chunk below.
 
 ```{r}
 hunan_ehsa = hunan |>
@@ -217,3 +242,34 @@ tm_shape(hunan_ehsa) +
   tm_fill("classification") +
   tm_borders(alpha = 0.4)
 ```
+
+### Interpretation of EHSA classes
+
+::: panel-tabset
+#### Hot Spot Trends
+
+| **Pattern Name**      | **Definition**                                                                                                                                                                                                                                                                                                           |
+|:----------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| No pattern detected   | Does not fall into any of the hot or cold spot patterns defined below.                                                                                                                                                                                                                                                   |
+| New Hot Spot          | A location that is a statistically significant hot spot for the final time step and has never been a statistically significant hot spot before.                                                                                                                                                                          |
+| Consecutive Hot Spot  | A location with a single uninterrupted run of at least two statistically significant hot spot bins in the final time-step intervals. The location has never been a statistically significant hot spot prior to the final hot spot run and less than 90 percent of all bins are statistically significant hot spots.      |
+| Intensifying Hot Spot | A location that has been a statistically significant hot spot for 90 percent of the time-step intervals, including the final time step. In addition, the intensity of clustering of high counts in each time step is increasing overall and that increase is statistically significant.                                  |
+| Persistent Hot Spot   | A location that has been a statistically significant hot spot for 90 percent of the time-step intervals with no discernible trend in the intensity of clustering over time.                                                                                                                                              |
+| Diminishing Hot Spot  | A location that has been a statistically significant hot spot for 90 percent of the time-step intervals, including the final time step. In addition, the intensity of clustering in each time step is decreasing overall and that decrease is statistically significant.                                                 |
+| Sporadic Hot Spot     | A statistically significant hot spot for the final time-step interval with a history of also being an on-again and off-again hot spot. Less than 90 percent of the time-step intervals have been statistically significant hot spots and none of the time-step intervals have been statistically significant cold spots. |
+| Oscillating Hot Spot  | A statistically significant hot spot for the final time-step interval that has a history of also being a statistically significant cold spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant hot spots.                                                    |
+| Historical Hot Spot   | The most recent time period is not hot, but at least 90 percent of the time-step intervals have been statistically significant hot spots.                                                                                                                                                                                |
+
+#### Cold Spot Trends
+
+| **Pattern Name**       | **Definition**                                                                                                                                                                                                                                                                                                             |
+|:-----------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| New Cold Spot          | A location that is a statistically significant cold spot for the final time step and has never been a statistically significant cold spot before.                                                                                                                                                                          |
+| Consecutive Cold Spot  | A location with a single uninterrupted run of at least two statistically significant cold spot bins in the final time-step intervals. The location has never been a statistically significant cold spot prior to the final cold spot run and less than 90 percent of all bins are statistically significant cold spots.    |
+| Intensifying Cold Spot | A location that has been a statistically significant cold spot for 90 percent of the time-step intervals, including the final time step. In addition, the intensity of clustering of low counts in each time step is increasing overall and that increase is statistically significant.                                    |
+| Persistent Cold Spot   | A location that has been a statistically significant cold spot for 90 percent of the time-step intervals with no discernible trend in the intensity of clustering of counts over time.                                                                                                                                     |
+| Diminishing Cold Spot  | A location that has been a statistically significant cold spot for 90 percent of the time-step intervals, including the final time step. In addition, the intensity of clustering of low counts in each time step is decreasing overall and that decrease is statistically significant.                                    |
+| Sporadic Cold Spot     | A statistically significant cold spot for the final time-step interval with a history of also being an on-again and off-again cold spot. Less than 90 percent of the time-step intervals have been statistically significant cold spots and none of the time-step intervals have been statistically significant hot spots. |
+| Oscillating Cold Spot  | A statistically significant cold spot for the final time-step interval that has a history of also being a statistically significant hot spot during a prior time step. Less than 90 percent of the time-step intervals have been statistically significant cold spots.                                                     |
+| Historical Cold Spot   | The most recent time period is not cold, but at least 90 percent of the time-step intervals have been statistically significant cold spots.                                                                                                                                                                                |
+:::
