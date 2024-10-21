@@ -45,7 +45,7 @@ website:
           href: In-class_Ex/In-class_Ex06/In-class_Ex06.html
         - text: "7 - Calibrate Hedonic Pricing Model for Private Highrise Property"
           href: In-class_Ex/In-class_Ex07/In-class_Ex07.html
-        - text: "8 - Preparing HDB data for Geographically Weighted Predictive Model"
+        - text: "8 - Geographically Weighted Predictive Models"
           href: In-class_Ex/In-class_Ex08/In-class_Ex08.html
       - text: "Take-home Exercise"
         menu: 

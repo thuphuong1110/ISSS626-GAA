@@ -1892,105 +1892,105 @@
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "",
     "text": "pacman::p_load(sf, spdep, GWmodel, SpatialML, tmap, rsample, Metrics, tidyverse, knitr,kableExtra)"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#read-data-file-from-rds",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#read-data-file-from-rds",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "2.1 Read data file from rds",
     "text": "2.1 Read data file from rds\nThe below code chunk reads data from rds file and store in mdata as simple feature dataframe.\n\nmdata &lt;- read_rds(\"data/mdata.rds\")"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#data-sampling",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#data-sampling",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "2.2 Data Sampling",
     "text": "2.2 Data Sampling\nThe data is split into train and test data sets with with size of 65% and 35% respectively using initial_split() of rsample package. rsample is one of the package from tidymodels.\n\nset.seed(1234)\nresale_split &lt;- initial_split(mdata, \n                              prop = 6.5/10,)\ntrain_data &lt;- training(resale_split)\ntest_data &lt;- testing(resale_split)\n\nWe write the data to rds format.\n\nwrite_rds(train_data, \"data/train_data.rds\")\nwrite_rds(test_data, \"data/test_data.rds\")\n\nRead the data from rds format.\n\ntrain_data &lt;- read_rds(\"data/train_data.rds\")\ntest_data &lt;- read_rds(\"data/test_data.rds\")"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#multicollinearity-check",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#multicollinearity-check",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "2.3 Multicollinearity Check",
     "text": "2.3 Multicollinearity Check\nIt is a good practice to use correlation matrix to examine if there is sign of multicollinearity before loading the predictors into a predictive model.\n\nmdata_nogeo = mdata |&gt;\n  st_drop_geometry()\nggstatsplot::ggcorrmat(mdata_nogeo[,2:17])"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#multicollinearity-check-with-vif",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#multicollinearity-check-with-vif",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "3.1 Multicollinearity check with VIF",
     "text": "3.1 Multicollinearity check with VIF\n\n3.1.1 VIF Table\n\nvif = performance::check_collinearity(price_mlr)\nkable(vif,\n      caption = \"Variance Inflator Factor (VIF) Results\") |&gt;\n  kable_styling(font_size = 10)\n\n\nVariance Inflator Factor (VIF) Results\n\n\nTerm\nVIF\nVIF_CI_low\nVIF_CI_high\nSE_factor\nTolerance\nTolerance_CI_low\nTolerance_CI_high\n\n\n\n\nfloor_area_sqm\n1.126308\n1.104360\n1.152871\n1.061276\n0.8878567\n0.8673997\n0.9055016\n\n\nstorey_order\n1.206586\n1.181102\n1.235657\n1.098447\n0.8287846\n0.8092862\n0.8466672\n\n\nremaining_lease_mths\n1.363528\n1.331762\n1.398335\n1.167702\n0.7333919\n0.7151363\n0.7508850\n\n\nPROX_CBD\n1.905054\n1.852553\n1.960788\n1.380237\n0.5249196\n0.5099991\n0.5397957\n\n\nPROX_ELDERLYCARE\n1.178400\n1.154108\n1.206522\n1.085541\n0.8486080\n0.8288284\n0.8664703\n\n\nPROX_HAWKER\n1.187828\n1.163132\n1.216262\n1.089875\n0.8418729\n0.8221915\n0.8597474\n\n\nPROX_MRT\n1.240457\n1.213579\n1.270718\n1.113758\n0.8061545\n0.7869568\n0.8240092\n\n\nPROX_PARK\n1.195883\n1.170847\n1.224588\n1.093564\n0.8362021\n0.8166011\n0.8540825\n\n\nPROX_MALL\n1.409846\n1.376277\n1.446409\n1.187369\n0.7092975\n0.6913675\n0.7265978\n\n\nPROX_SUPERMARKET\n1.154751\n1.131493\n1.182124\n1.074594\n0.8659873\n0.8459353\n0.8837880\n\n\nWITHIN_350M_KINDERGARTEN\n1.125809\n1.103886\n1.152360\n1.061042\n0.8882499\n0.8677846\n0.9058910\n\n\nWITHIN_350M_CHILDCARE\n1.335594\n1.304923\n1.369351\n1.155679\n0.7487304\n0.7302729\n0.7663289\n\n\nWITHIN_350M_BUS\n1.148544\n1.125564\n1.175729\n1.071701\n0.8706679\n0.8505364\n0.8884435\n\n\nWITHIN_1KM_PRISCH\n1.550879\n1.511876\n1.592853\n1.245343\n0.6447958\n0.6278044\n0.6614298\n\n\n\n\n\n\n\n\n\n3.1.2 VIF Plot\n\nplot(vif) +\n  theme(axis.text.x = element_text(angle = 45, hjust = 1))\n\nVariable `Component` is not in your data frame :/"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#compute-adaptive-bandwidth",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#compute-adaptive-bandwidth",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "4.1 Compute adaptive bandwidth",
     "text": "4.1 Compute adaptive bandwidth\n\nbw_adaptive &lt;- bw.gwr(resale_price ~ floor_area_sqm +\n                  storey_order + remaining_lease_mths +\n                  PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER +\n                  PROX_MRT + PROX_PARK + PROX_MALL + \n                  PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n                  WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +\n                  WITHIN_1KM_PRISCH,\n                  data=train_data,\n                  approach=\"CV\",\n                  kernel=\"gaussian\",\n                  adaptive=TRUE,\n                  longlat=FALSE)\n\nThe result shows that 40 neighbour points is the optimal adaptive bandwidth to be used for this data set.\n\nwrite_rds(bw_adaptive, \"data/bw_adaptive.rds\")"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#construct-the-adaptive-bandwidth-gwr-model",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#construct-the-adaptive-bandwidth-gwr-model",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "4.2 Construct the adaptive bandwidth gwr model",
     "text": "4.2 Construct the adaptive bandwidth gwr model\nFirst we call the save bandwidth using the code chunk below.\n\nbw_adaptive &lt;- read_rds(\"data/bw_adaptive.rds\")\n\nNow, we go ahead to calibrate the gwr-based hedonic pricing model using adaptive bandwidth and Gaussian kernel as shown in the code chunk below.\n\ngwr_adaptive &lt;- gwr.basic(formula = resale_price ~\n                            floor_area_sqm + storey_order +\n                            remaining_lease_mths + PROX_CBD + \n                            PROX_ELDERLYCARE + PROX_HAWKER +\n                            PROX_MRT + PROX_PARK + PROX_MALL + \n                            PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n                            WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +\n                            WITHIN_1KM_PRISCH,\n                          data=train_data,\n                          bw=bw_adaptive, \n                          kernel = 'gaussian', \n                          adaptive=TRUE,\n                          longlat = FALSE)\n\nNext the model is saved in rds format for future use.\n\nwrite_rds(gwr_adaptive, \"data/gwr_adaptive.rds\")"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#retrieve-gwr-output-object",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#retrieve-gwr-output-object",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "4.3 Retrieve gwr output object",
     "text": "4.3 Retrieve gwr output object\nThe code chunk below retrieves the save gwr model object.\n\ngwr_adaptive &lt;- read_rds(\"data/gwr_adaptive.rds\")\n\nThe model output can be displayed using below code.\n\ngwr_adaptive\n\n   ***********************************************************************\n   *                       Package   GWmodel                             *\n   ***********************************************************************\n   Program starts at: 2024-10-21 21:44:59.0768 \n   Call:\n   gwr.basic(formula = resale_price ~ floor_area_sqm + storey_order + \n    remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER + \n    PROX_MRT + PROX_PARK + PROX_MALL + PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN + \n    WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + WITHIN_1KM_PRISCH, \n    data = train_data, bw = bw_adaptive, kernel = \"gaussian\", \n    adaptive = TRUE, longlat = FALSE)\n\n   Dependent (y) variable:  resale_price\n   Independent variables:  floor_area_sqm storey_order remaining_lease_mths PROX_CBD PROX_ELDERLYCARE PROX_HAWKER PROX_MRT PROX_PARK PROX_MALL PROX_SUPERMARKET WITHIN_350M_KINDERGARTEN WITHIN_350M_CHILDCARE WITHIN_350M_BUS WITHIN_1KM_PRISCH\n   Number of data points: 10335\n   ***********************************************************************\n   *                    Results of Global Regression                     *\n   ***********************************************************************\n\n   Call:\n    lm(formula = formula, data = data)\n\n   Residuals:\n    Min      1Q  Median      3Q     Max \n-205193  -39120   -1930   36545  472355 \n\n   Coefficients:\n                              Estimate Std. Error t value Pr(&gt;|t|)    \n   (Intercept)              107601.073  10601.261  10.150  &lt; 2e-16 ***\n   floor_area_sqm             2780.698     90.579  30.699  &lt; 2e-16 ***\n   storey_order              14299.298    339.115  42.167  &lt; 2e-16 ***\n   remaining_lease_mths        344.490      4.592  75.027  &lt; 2e-16 ***\n   PROX_CBD                 -16930.196    201.254 -84.124  &lt; 2e-16 ***\n   PROX_ELDERLYCARE         -14441.025    994.867 -14.516  &lt; 2e-16 ***\n   PROX_HAWKER              -19265.648   1273.597 -15.127  &lt; 2e-16 ***\n   PROX_MRT                 -32564.272   1744.232 -18.670  &lt; 2e-16 ***\n   PROX_PARK                 -5712.625   1483.885  -3.850 0.000119 ***\n   PROX_MALL                -14717.388   2007.818  -7.330 2.47e-13 ***\n   PROX_SUPERMARKET         -26881.938   4189.624  -6.416 1.46e-10 ***\n   WITHIN_350M_KINDERGARTEN   8520.472    632.812  13.464  &lt; 2e-16 ***\n   WITHIN_350M_CHILDCARE     -4510.650    354.015 -12.741  &lt; 2e-16 ***\n   WITHIN_350M_BUS             813.493    222.574   3.655 0.000259 ***\n   WITHIN_1KM_PRISCH         -8010.834    491.512 -16.298  &lt; 2e-16 ***\n\n   ---Significance stars\n   Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 \n   Residual standard error: 61650 on 10320 degrees of freedom\n   Multiple R-squared: 0.7373\n   Adjusted R-squared: 0.737 \n   F-statistic:  2069 on 14 and 10320 DF,  p-value: &lt; 2.2e-16 \n   ***Extra Diagnostic information\n   Residual sum of squares: 3.922202e+13\n   Sigma(hat): 61610.08\n   AIC:  257320.2\n   AICc:  257320.3\n   BIC:  247249\n   ***********************************************************************\n   *          Results of Geographically Weighted Regression              *\n   ***********************************************************************\n\n   *********************Model calibration information*********************\n   Kernel function: gaussian \n   Adaptive bandwidth: 40 (number of nearest neighbours)\n   Regression points: the same locations as observations are used.\n   Distance metric: Euclidean distance metric is used.\n\n   ****************Summary of GWR coefficient estimates:******************\n                                   Min.     1st Qu.      Median     3rd Qu.\n   Intercept                -3.2478e+08 -4.7727e+05 -8.3004e+03  5.5025e+05\n   floor_area_sqm           -2.8714e+04  1.4475e+03  2.3011e+03  3.3900e+03\n   storey_order              3.3186e+03  8.5899e+03  1.0826e+04  1.3397e+04\n   remaining_lease_mths     -1.4431e+03  2.6063e+02  3.9048e+02  5.2865e+02\n   PROX_CBD                 -1.0837e+07 -5.7697e+04 -1.3787e+04  2.6552e+04\n   PROX_ELDERLYCARE         -3.2195e+07 -4.0643e+04  1.0562e+04  6.1054e+04\n   PROX_HAWKER              -2.3985e+08 -5.1365e+04  3.0026e+03  6.4287e+04\n   PROX_MRT                 -1.1632e+07 -1.0488e+05 -4.9373e+04  5.1037e+03\n   PROX_PARK                -6.5961e+06 -4.8671e+04 -8.8128e+02  5.3498e+04\n   PROX_MALL                -1.8112e+07 -7.4238e+04 -1.3982e+04  4.9779e+04\n   PROX_SUPERMARKET         -4.5761e+06 -6.3461e+04 -1.7429e+04  3.5616e+04\n   WITHIN_350M_KINDERGARTEN -4.1823e+05 -6.0040e+03  9.0209e+01  4.7127e+03\n   WITHIN_350M_CHILDCARE    -1.0273e+05 -2.2375e+03  2.6668e+02  2.6388e+03\n   WITHIN_350M_BUS          -1.1757e+05 -1.4719e+03  1.1626e+02  1.7584e+03\n   WITHIN_1KM_PRISCH        -6.6465e+05 -5.5959e+03  2.6916e+02  5.7500e+03\n                                  Max.\n   Intercept                1.6493e+08\n   floor_area_sqm           5.0907e+04\n   storey_order             2.9537e+04\n   remaining_lease_mths     1.8119e+03\n   PROX_CBD                 2.2411e+07\n   PROX_ELDERLYCARE         8.2444e+07\n   PROX_HAWKER              5.9654e+06\n   PROX_MRT                 2.0189e+08\n   PROX_PARK                1.5188e+07\n   PROX_MALL                1.0443e+07\n   PROX_SUPERMARKET         3.8330e+06\n   WITHIN_350M_KINDERGARTEN 6.6799e+05\n   WITHIN_350M_CHILDCARE    1.0802e+05\n   WITHIN_350M_BUS          3.7313e+04\n   WITHIN_1KM_PRISCH        5.0231e+05\n   ************************Diagnostic information*************************\n   Number of data points: 10335 \n   Effective number of parameters (2trace(S) - trace(S'S)): 1730.101 \n   Effective degrees of freedom (n-2trace(S) + trace(S'S)): 8604.899 \n   AICc (GWR book, Fotheringham, et al. 2002, p. 61, eq 2.33): 238871.9 \n   AIC (GWR book, Fotheringham, et al. 2002,GWR p. 96, eq. 4.22): 237036.9 \n   BIC (GWR book, Fotheringham, et al. 2002,GWR p. 61, eq. 2.34): 238209.1 \n   Residual sum of squares: 4.829191e+12 \n   R-square value:  0.967657 \n   Adjusted R-square value:  0.9611534 \n\n   ***********************************************************************\n   Program stops at: 2024-10-21 21:46:26.519215"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#predict-with-test-data",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#predict-with-test-data",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "4.4 Predict with Test Data",
     "text": "4.4 Predict with Test Data\n\ngwr_pred &lt;- gwr.predict(formula = resale_price ~\n                          floor_area_sqm + storey_order +\n                          remaining_lease_mths + PROX_CBD + \n                          PROX_ELDERLYCARE + PROX_HAWKER + \n                          PROX_MRT + PROX_PARK + PROX_MALL + \n                          PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n                          WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + \n                          WITHIN_1KM_PRISCH, \n                        data=train_data, \n                        predictdata = test_data, \n                        bw = bw_adaptive, \n                        kernel = 'gaussian', \n                        adaptive=TRUE, \n                        longlat = FALSE)"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#prepare-coordinates-data",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#prepare-coordinates-data",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "5.1 Prepare Coordinates data",
     "text": "5.1 Prepare Coordinates data\nThe code chunk below extracts the x,y coordinates of the full, training and test data sets.\n\ncoords &lt;- st_coordinates(mdata)\ncoords_train &lt;- st_coordinates(train_data)\ncoords_test &lt;- st_coordinates(test_data)\n\nWe write all the output into rds for future use.\n\ncoords_train &lt;- write_rds(coords_train, \"data/coords_train.rds\" )\ncoords_test &lt;- write_rds(coords_test, \"data/coords_test.rds\" )"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#drop-geometry-field",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#drop-geometry-field",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "5.2 Drop Geometry field",
     "text": "5.2 Drop Geometry field\nFirst, we drop the geometry column of the sf data.frame using st_drop_geometry() of sf package as ranger() function require tible dataframe.\n\ntrain_data_nogeom &lt;- train_data %&gt;% \n  st_drop_geometry()"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#calibrate-random-forest-model",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#calibrate-random-forest-model",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "5.3 Calibrate Random Forest model",
     "text": "5.3 Calibrate Random Forest model\nWe calibrate a model to predict HDB resale price using random forest function of ranger package.\n\nset.seed(1234)\nrf &lt;- ranger(resale_price ~ floor_area_sqm + storey_order + \n               remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE + \n               PROX_HAWKER + PROX_MRT + PROX_PARK + PROX_MALL + \n               PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n               WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + \n               WITHIN_1KM_PRISCH,\n             data=train_data_nogeom)\n\n\nwrite_rds(rf, \"data/rf.rds\")\n\n\nrf &lt;- read_rds(\"data/rf.rds\")\nrf\n\nRanger result\n\nCall:\n ranger(resale_price ~ floor_area_sqm + storey_order + remaining_lease_mths +      PROX_CBD + PROX_ELDERLYCARE + PROX_HAWKER + PROX_MRT + PROX_PARK +      PROX_MALL + PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +      WITHIN_350M_CHILDCARE + WITHIN_350M_BUS + WITHIN_1KM_PRISCH,      data = train_data_nogeom) \n\nType:                             Regression \nNumber of trees:                  500 \nSample size:                      10335 \nNumber of independent variables:  14 \nMtry:                             3 \nTarget node size:                 5 \nVariable importance mode:         none \nSplitrule:                        variance \nOOB prediction error (MSE):       728602496 \nR squared (OOB):                  0.9495728"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#calibrate-with-grf",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#calibrate-with-grf",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "5.4 Calibrate with grf()",
     "text": "5.4 Calibrate with grf()\nIn this section, we explore how to calibrate a model to predict HDB resale price by using grf() of SpatialML package.\n\nset.seed(1234)\ngwRF_adaptive &lt;- grf(formula = resale_price ~ floor_area_sqm + storey_order +\n                       remaining_lease_mths + PROX_CBD + PROX_ELDERLYCARE +\n                       PROX_HAWKER + PROX_MRT + PROX_PARK + PROX_MALL +\n                       PROX_SUPERMARKET + WITHIN_350M_KINDERGARTEN +\n                       WITHIN_350M_CHILDCARE + WITHIN_350M_BUS +\n                       WITHIN_1KM_PRISCH,\n                     dframe=train_data_nogeom, \n                     bw=55,\n                     kernel=\"adaptive\",\n                     coords=coords_train)\n\nThe model output is saved into rds format using the below code chunk.\n\nwrite_rds(gwRF_adaptive, \"data/gwRF_adaptive.rds\")\n\nThe below code chunk retrieves the saved model.\n\ngwRF_adaptive &lt;- read_rds(\"data/gwRF_adaptive.rds\")"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#predict-using-the-test-data",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#predict-using-the-test-data",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "5.5 Predict using the test data",
     "text": "5.5 Predict using the test data\n\n5.5.1 Prepare the test data\nThe code chunk combines the test data with its corresponding coordinates data.\n\ntest_data_nogeom &lt;- cbind(test_data, coords_test) %&gt;%\n  st_drop_geometry()\n\n\n\n5.5.2 Predict with the test data\nNext, predict.grf() of spatialML package is used to predict the resale value using the test data and gwRF_adaptive model calibrated earlier.\n\ngwRF_pred &lt;- predict.grf(gwRF_adaptive, \n                           test_data_nogeom, \n                           x.var.name=\"X\",\n                           y.var.name=\"Y\", \n                           local.w=1,\n                           global.w=0)\n\nBefore moving on, we save the output into rds file for future usage.\n\nGRF_pred &lt;- write_rds(gwRF_pred, \"data/GRF_pred.rds\")\n\n\n\n5.5.3 Convert the predicting output into a data frame\nThe output of the predict.grf() is a vector of predicted values. It is more efficient to convert it into a data frame for further visualisation and analysis.\n\nGRF_pred &lt;- read_rds(\"data/GRF_pred.rds\")\nGRF_pred_df &lt;- as.data.frame(GRF_pred)\n\nNext cbind() is used to append the predicted values onto test_data.\n\ntest_data_p &lt;- cbind(test_data, GRF_pred_df)\n\n\nwrite_rds(test_data_p, \"data/test_data_p.rds\")"
   },
   {
     "objectID": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#visualiza-the-predicted-values",
     "href": "In-class_Ex/In-class_Ex08/In-class_Ex08.html#visualiza-the-predicted-values",
-    "title": "In-class Exercise 8",
+    "title": "In-class Exercise 8: Geographically Weighted Predictive Models",
     "section": "5.6 Visualiza the predicted values",
     "text": "5.6 Visualiza the predicted values\n\nggplot(data = test_data_p,\n       aes(x = GRF_pred,\n           y = resale_price)) +\n  geom_point()\n\n\n\n\n\n\n\n\nPlot in map form to see which area the model tends to overestimate/underestimate (how the errors distribute throughout the space)."
   },
