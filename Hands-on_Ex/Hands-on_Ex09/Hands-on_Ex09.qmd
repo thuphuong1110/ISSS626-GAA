@@ -1,0 +1,447 @@
+---
+title: "Hands-on Exercise 9: Modelling Geographical Accessibility"
+author: "Nguyen Bao Thu Phuong"
+date: "26 October 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---
+
+# Overview
+
+In this hands-on exercise, we'll explore how to model geographical accessibility using R’s geospatial analysis packages.
+
+By the end of this exercise, you’ll be able to:
+
+-   Import GIS polygon data into R and save it as a simple feature data frame with functions from the **sf** package.
+
+-   Import aspatial data into R and similarly save it as a simple feature data frame with **sf** functions.
+
+-   Compute accessibility measures using Hansen’s potential model and the Spatial Accessibility Measure (SAM).
+
+-   Visualize accessibility measures with the **tmap** and **ggplot2** packages.
+
+# The Data
+
+This hands-on exercise will utilize four data sets:
+
+1.  **MP14_SUBZONE_NO_SEA_PL**: GIS data for the URA Master Plan 2014 subzone boundaries, downloaded from data.gov.sg.
+
+2.  **Hexagons**: GIS data consisting of 250m radius hexagons, created using the `st_make_grid()` function from the `sf` package, and provided in ESRI shapefile format.
+
+3.  **ELDERCARE**: GIS data showing the locations of eldercare services, also downloaded from data.gov.sg. It includes two formats: ESRI shapefile (used for this exercise) and Google KML.
+
+4.  **OD_Matrix**: A CSV distance matrix with six fields:
+
+    -   **origin_id**: Unique identifier for the origin (`fid` of the hexagon data set).
+
+    -   **destination_id**: Unique identifier for the destination (`fid` of the ELDERCARE data set).
+
+    -   **entry_cost**: Perpendicular distance from the origin to the nearest road.
+
+    -   **network_cost**: Actual distance between the origin and destination.
+
+    -   **exit_cost**: Perpendicular distance from the destination to the nearest road.
+
+    -   **total_cost**: Sum of entry, network, and exit costs.
+
+    -   All values of cost related fields are in meters.
+
+**Note**: Except for the MP14_SUBZONE_NO_SEA_PL data set, the other three were specially prepared by Prof. Kam for teaching and research purposes. Students enrolled in Geospatial Analytics and Applications course may use them for hands-on exercises, but formal approval from Prof. Kam is required for any other use.
+
+# Getting Started
+
+Before we begin, it’s essential to install the necessary R packages and load them into the RStudio environment. The following R packages are required for this exercise:
+
+-   Spatial Data Handling: `sf`
+
+-   Geographical Accessibility Modeling: `spatialAcc`
+
+-   Attribute Data Handling: `tidyverse` (especially `readr` and `dplyr`)
+
+-   Thematic Mapping: `tmap`
+
+-   Statistical Graphics: `ggplot2`
+
+-   Statistical Analysis: `ggstatsplot`
+
+The code chunk below installs and loads these packages into RStudio:
+
+```{r}
+pacman::p_load(tmap, SpatialAcc, sf, 
+               ggstatsplot, reshape2,
+               tidyverse)
+```
+
+Note that by loading **tidyverse**, there’s no need to install **readr, dplyr,** and **ggplot2** separately, as it includes additional packages such as **tidyr, stringr, forcats, tibble, purrr,** and **magrittr**.
+
+# Geospatial Data Wrangling
+
+## Import geospatial data
+
+We will import three geospatial data sets from the data/geospatial sub-folder: `MP14_SUBZONE_NO_SEA_PL`, `hexagons`, and `ELDERCARE`. The code chunk below imports these shapefiles using the `st_read()` function from the **sf** package.
+
+```{r}
+mpsz <- st_read(dsn = "data/geospatial", layer = "MP14_SUBZONE_NO_SEA_PL")
+```
+
+```{r}
+hexagons <- st_read(dsn = "data/geospatial", layer = "hexagons") 
+```
+
+```{r}
+eldercare <- st_read(dsn = "data/geospatial", layer = "ELDERCARE") 
+```
+
+The report indicates that the R object containing the imported `MP14_SUBZONE_WEB_PL` shapefile is named `mpsz`. It is a simple feature object with geometry type multipolygon. It is important to note that the `mpsz` simple feature object lacks EPSG information.
+
+## Update CRS information
+
+The code chunk below updates the newly imported `mpsz` with the correct ESPG code (i.e. 3414)
+
+```{r}
+mpsz <- st_transform(mpsz, 3414)
+eldercare <- st_transform(eldercare, 3414)
+hexagons <- st_transform(hexagons, 3414)
+```
+
+After transforming the projection metadata, we can verify the projection of the newly transformed `mpsz_svy21` using *st_crs()* of sf package as in below code chunk.
+
+```{r}
+st_crs(mpsz)
+```
+
+Notice that the EPSG is indicated as *3414* now.
+
+## Clean and Update attribute fields of the geospatial data
+
+Many redundant fields exist in both data tables `eldercare` and `hexagons`. The code chunks below excludes these redundant fields while adding two new fields: `demand` to the `hexagons` data table and `capacity` to the `eldercare` simple feature data frame. Both fields will be derived using the `mutate()` function from the **dplyr** package.
+
+```{r}
+eldercare <- eldercare %>%
+  select(fid, ADDRESSPOS) %>%
+  mutate(capacity = 100)
+```
+
+```{r}
+hexagons <- hexagons %>%
+  select(fid) %>%
+  mutate(demand = 100)
+```
+
+For this hands-on exercise, a constant value of 100 is used for both the `capacity` and `demand` fields. In practice, actual demand for the hexagons and capacity for the eldercare centers should be applied.
+
+# Aspatial Data Handling and Wrangling
+
+## Import distance matrix
+
+The code chunk below uses *read_cvs()* of **readr** package to import `OD_Matrix.csv` into RStudio as a tibble data.frame called `ODMatrix`.
+
+```{r}
+ODMatrix <- read_csv("data/aspatial/OD_Matrix.csv", skip = 0)
+```
+
+## Tidy distance matrix
+
+The imported ODMatrix organised the distance matrix columnwise.
+
+```{r}
+head(ODMatrix)
+```
+
+However, most of the modelling packages in R is expecting a matrix look similar to the figure below.
+
+![](data/matrix screenshot.png)
+
+The rows represent **origins** (also know as **from** field) and the columns represent **destination** (i.e. also known as **to** field.). The `pivot_wider()` function from the `tidyr` package was used to transform the O-D matrix from a long format to a wide format.
+
+```{r}
+distmat <- ODMatrix %>%
+  select(origin_id, destination_id, total_cost) %>%
+  pivot_wider(names_from = destination_id, values_from = total_cost)%>%
+  select(c(-c('origin_id')))
+```
+
+As SVY21 projected coordinate system is used, the distance is measured in metre. The code chunk below converta the unit measurement from metre to kilometre.
+
+```{r}
+distmat_km <- as.matrix(distmat/1000)
+```
+
+# Model and Visualize Accessibility using Hansen Method
+
+## Compute Hansen's accessibility
+
+Now we are ready to compute Hansen’s accessibility using the `ac()` function from the **SpatialAcc** package. Before proceeding, it's advisable to review the function's arguments at least once to ensure that all required inputs are available.
+
+The code chunk below calculates Hansen’s accessibility, using `ac()` from the **SpatialAcc** package, and saves the output in a data frame called `acc_Hansen` using the `data.frame()` function.
+
+```{r}
+acc_Hansen <- data.frame(ac(hexagons$demand,
+                            eldercare$capacity,
+                            distmat_km, 
+                            #d0 = 50,
+                            power = 2, 
+                            family = "Hansen"))
+```
+
+```{r}
+head(acc_Hansen)
+```
+
+The default field name is messy, we rename it to `accHansen` using the code chunk below.
+
+```{r}
+colnames(acc_Hansen) <- "accHansen"
+```
+
+Notice that the field name is much more tidy now.
+
+```{r}
+head(acc_Hansen)
+```
+
+Next, we convert the data table into tibble format by using the code chunk below.
+
+```{r}
+acc_Hansen <- as_tibble(acc_Hansen)
+```
+
+Lastly, *bind_cols()* of **dplyr** is used to join the `acc_Hansen` tibble data frame with the `hexagons` simple feature data frame. The output is saved in `hexagon_Hansen`.
+
+```{r}
+hexagon_Hansen <- bind_cols(hexagons, acc_Hansen)
+```
+
+Notice that `hexagon_Hansen` is a simple feature data frame and not a tibble data frame.
+
+```{r}
+head(hexagon_Hansen)
+```
+
+The steps above can be perform using a single code chunk as below.
+
+```{r}
+acc_Hansen <- data.frame(ac(hexagons$demand,
+                            eldercare$capacity,
+                            distmat_km, 
+                            #d0 = 50,
+                            power = 0.5, 
+                            family = "Hansen"))
+
+colnames(acc_Hansen) <- "accHansen"
+acc_Hansen <- as_tibble(acc_Hansen)
+hexagon_Hansen <- bind_cols(hexagons, acc_Hansen)
+```
+
+## Visualize Hansen’s accessibility
+
+### Extract map extend
+
+First we extract the extend of `hexagons` simple feature data frame by using *st_bbox()* of **sf** package.
+
+```{r}
+mapex <- st_bbox(hexagons)
+```
+
+The code chunk below uses a collection of mapping fucntions of **tmap** package to create a high cartographic quality accessibility to eldercare centre in Singapore.
+
+```{r}
+tmap_mode("plot")
+tm_shape(hexagon_Hansen,
+         bbox = mapex) + 
+  tm_fill(col = "accHansen",
+          n = 10,
+          style = "quantile",
+          border.col = "black",
+          border.lwd = 1) +
+tm_shape(eldercare) +
+  tm_symbols(size = 0.1) +
+  tm_layout(main.title = "Accessibility to eldercare: Hansen method",
+            main.title.position = "center",
+            main.title.size = 2,
+            legend.outside = FALSE,
+            legend.height = 0.45, 
+            legend.width = 3.0,
+            legend.format = list(digits = 6),
+            legend.position = c("right", "top"),
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar(width = 0.15) +
+  tm_grid(lwd = 0.1, alpha = 0.5)
+```
+
+## Statistical graphic visualisation
+
+In this section, we will compare the distribution of Hansen’s accessibility values by URA Planning Region.
+
+First, we need to add the planning region field to the `hexagon_Hansen` simple feature data frame using the code chunk below.
+
+```{r}
+hexagon_Hansen <- st_join(hexagon_Hansen, mpsz, 
+                          join = st_intersects)
+```
+
+Next, *ggplot()* will be used to plot the distribution by using boxplot graphical method.
+
+```{r}
+ggplot(data=hexagon_Hansen, 
+       aes(y = log(accHansen), 
+           x= REGION_N)) +
+  geom_boxplot() +
+  geom_point(stat="summary", 
+             fun.y="mean", 
+             colour ="red", 
+             size=2)
+```
+
+# Model and Visualize Accessibility using KD2SFCA Method
+
+## Compute KD2SFCA’s accessibility
+
+In this section, we will repeat most of the steps used in the previous section to conduct the analysis, with some code combined into a single code chunk.
+
+The code chunk below calculates Hansen’s accessibility using the `ac()` function from the **SpatialAcc** package, and the output is saved in a data frame called `acc_KD2SFCA`. Note that `KD2SFCA` is specified for the `family` argument.
+
+```{r}
+acc_KD2SFCA <- data.frame(ac(hexagons$demand,
+                            eldercare$capacity,
+                            distmat_km, 
+                            d0 = 50,
+                            power = 2, 
+                            family = "KD2SFCA"))
+
+colnames(acc_KD2SFCA) <- "accKD2SFCA"
+acc_KD2SFCA <- as_tibble(acc_KD2SFCA)
+hexagon_KD2SFCA <- bind_cols(hexagons, acc_KD2SFCA)
+```
+
+## Visualize KD2SFCA’s accessibility
+
+The code chunk below uses a collection of mapping fucntions of **tmap** package to create a high cartographic quality accessibility to eldercare centre in Singapore. Notice that `mapex` is reused for *bbox* argument.
+
+```{r}
+tmap_mode("plot")
+tm_shape(hexagon_KD2SFCA,
+         bbox = mapex) + 
+  tm_fill(col = "accKD2SFCA",
+          n = 10,
+          style = "quantile",
+          border.col = "black",
+          border.lwd = 1) +
+tm_shape(eldercare) +
+  tm_symbols(size = 0.1) +
+  tm_layout(main.title = "Accessibility to eldercare: KD2SFCA method",
+            main.title.position = "center",
+            main.title.size = 2,
+            legend.outside = FALSE,
+            legend.height = 0.45, 
+            legend.width = 3.0,
+            legend.format = list(digits = 6),
+            legend.position = c("right", "top"),
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar(width = 0.15) +
+  tm_grid(lwd = 0.1, alpha = 0.5)
+```
+
+## Statistical graphic visualisation
+
+Now, we will compare the distribution of KD2CFA accessibility values by URA Planning Region.
+
+First, we need to add the planning region field to the `hexagon_KD2SFCA` simple feature data frame using the code chunk below.
+
+```{r}
+hexagon_KD2SFCA <- st_join(hexagon_KD2SFCA, mpsz, 
+                          join = st_intersects)
+```
+
+Next, *ggplot()* will be used to plot the distribution by using boxplot.
+
+```{r}
+ggplot(data=hexagon_KD2SFCA, 
+       aes(y = accKD2SFCA, 
+           x= REGION_N)) +
+  geom_boxplot() +
+  geom_point(stat="summary", 
+             fun.y="mean", 
+             colour ="red", 
+             size=2)
+```
+
+# Model and Visualize Accessibility using Spatial Accessibility Measure (SAM) Method
+
+## Compute SAM Accessibility
+
+In this section, we will repeat most of the steps learned in the previous section to perform the analysis, with some code combined into a single code chunk.
+
+The code chunk below calculates Hansen’s accessibility using the `ac()` function from the `SpatialAcc` package, and the output is saved in a data frame called `acc_SAM`. Note that `SAM` is specified for the family argument.
+
+```{r}
+acc_SAM <- data.frame(ac(hexagons$demand,
+                         eldercare$capacity,
+                         distmat_km, 
+                         d0 = 50,
+                         power = 2, 
+                         family = "SAM"))
+
+colnames(acc_SAM) <- "accSAM"
+acc_SAM <- as_tibble(acc_SAM)
+hexagon_SAM <- bind_cols(hexagons, acc_SAM)
+```
+
+## Visualize SAM’s accessibility
+
+The code chunk below uses a collection of mapping fucntions of **tmap** package to create a high cartographic quality accessibility to eldercare centre in Singapore. Notice that `mapex` is reused for *bbox* argument.
+
+```{r}
+tmap_mode("plot")
+tm_shape(hexagon_SAM,
+         bbox = mapex) + 
+  tm_fill(col = "accSAM",
+          n = 10,
+          style = "quantile",
+          border.col = "black",
+          border.lwd = 1) +
+tm_shape(eldercare) +
+  tm_symbols(size = 0.1) +
+  tm_layout(main.title = "Accessibility to eldercare: SAM method",
+            main.title.position = "center",
+            main.title.size = 2,
+            legend.outside = FALSE,
+            legend.height = 0.45, 
+            legend.width = 3.0,
+            legend.format = list(digits = 3),
+            legend.position = c("right", "top"),
+            frame = TRUE) +
+  tm_compass(type="8star", size = 2) +
+  tm_scale_bar(width = 0.15) +
+  tm_grid(lwd = 0.1, alpha = 0.5)
+```
+
+## Statistical graphic visualisation
+
+Now, we will compare the distribution of SAM accessibility values by URA Planning Region.
+
+First, we need to add the planning region field to the `hexagon_SAM` simple feature data frame using the code chunk below.
+
+```{r}
+hexagon_SAM <- st_join(hexagon_SAM, mpsz, 
+                       join = st_intersects)
+```
+
+Next, ggplot() will be used to plot the distribution using boxplot.
+
+```{r}
+ggplot(data=hexagon_SAM, 
+       aes(y = accSAM, 
+           x= REGION_N)) +
+  geom_boxplot() +
+  geom_point(stat="summary", 
+             fun.y="mean", 
+             colour ="red", 
+             size=2)
+```
