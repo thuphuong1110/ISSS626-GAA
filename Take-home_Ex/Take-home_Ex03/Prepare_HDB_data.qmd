@@ -13,7 +13,7 @@ execute:
 # Import R Packages
 
 ```{r}
-pacman::p_load(tidyverse, sf, httr, jsonlite, rvest)
+pacman::p_load(tidyverse, sf, httr, jsonlite, rvest, tmap)
 ```
 
 -   rvest: use for web crawling
@@ -133,4 +133,37 @@ coords <- get_coords(add_list)
 
 ```{r}
 write_rds(coords, "data/rds/coords.rds")
+```
+
+```{r}
+eldercare = st_read(dsn = 'data/rawdata',
+                    layer = 'ELDERCARE') |>
+  st_transform(crs = 3414)
+```
+
+```{r}
+CHAS = st_read('data/rawdata/CHASClinics.kml') |>
+  st_transform(crs = 3414)
+```
+
+# Count number of points within a Distance
+
+Count all the eldercare/clinics within 1km from the HDB
+
+```{r}
+buffer_1km = st_buffer(eldercare, dist = 1000)
+```
+
+```{r}
+tmap_mode('view')
+tm_shape(buffer_1km) + # plot the larger share first (polygon > points)
+  tm_polygons() +
+  tm_shape(CHAS) +
+  tm_dots()
+tmap_mode('plot')
+```
+
+```{r}
+buffer_1km$clinic_count = lengths(
+  st_intersects(buffer_1km, CHAS))
 ```

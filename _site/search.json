@@ -2182,5 +2182,61 @@
     "title": "ISSS626-GAA",
     "section": "",
     "text": "&lt;!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’&gt;     dataset\n\n\n        0 0     false"
+  },
+  {
+    "objectID": "Take-home_Ex/Take-home_Ex03/Prepare_HDB_data.html",
+    "href": "Take-home_Ex/Take-home_Ex03/Prepare_HDB_data.html",
+    "title": "Take-home Exercise 3: Preparing HDB data for Geographically Weighted Predictive Model",
+    "section": "",
+    "text": "1 Import R Packages\n\npacman::p_load(tidyverse, sf, httr, jsonlite, rvest, tmap)\n\n\nrvest: use for web crawling\njsonlite: to convert json file to dataframe format\ntidyverse & sf: further data manipulation\n\n\n\n2 Import the Data\nFirst we load in the Resale data from January 2023 to September 2024.\n\nresale &lt;- read_csv(\"data/rawdata/resale.csv\") %&gt;%\n  filter(month &gt;= \"2023-01\" & month &lt;= \"2024-09\")\n\nRows: 192234 Columns: 11\n── Column specification ────────────────────────────────────────────────────────\nDelimiter: \",\"\nchr (8): month, town, flat_type, block, street_name, storey_range, flat_mode...\ndbl (3): floor_area_sqm, lease_commence_date, resale_price\n\nℹ Use `spec()` to retrieve the full column specification for this data.\nℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.\n\n\n\nresale_tidy &lt;- resale %&gt;%\n  mutate(address = paste(block,street_name)) %&gt;%\n  mutate(remaining_lease_yr = as.integer(\n    str_sub(remaining_lease, 0, 2)))%&gt;%\n  mutate(remaining_lease_mth = as.integer(\n    str_sub(remaining_lease, 9, 11)))\n\nWe narrow down the data scope to load into Onemap API later.\n\nresale_selected &lt;- resale_tidy %&gt;%\n  filter(month == \"2024-09\")\n\nNext we extract the list of unique addresses from resale_selected. The list is sorted to ensure the first address is always picked up.\n\nadd_list &lt;- sort(unique(resale_selected$address))\n\nThe below function read in any address list and record the coordinates of the parsed addresses.\n\nget_coords &lt;- function(add_list){\n  \n  # Create a data frame to store all retrieved coordinates\n  postal_coords &lt;- data.frame()\n    \n  for (i in add_list){\n    #print(i)\n    # as the API provided code for 1 address search at a time only, for pasrsing a list of addresses we use the common/elastic/search syntax as below\n    r &lt;- GET('https://www.onemap.gov.sg/api/common/elastic/search?',\n           query=list(searchVal=i,\n                     returnGeom='Y',\n                     getAddrDetails='Y'))\n    data &lt;- fromJSON(rawToChar(r$content))\n    found &lt;- data$found\n    res &lt;- data$results\n    \n    # Create a new data frame for each address\n    new_row &lt;- data.frame()\n    \n    # If single result, append \n    if (found == 1){\n      postal &lt;- res$POSTAL \n      lat &lt;- res$LATITUDE\n      lng &lt;- res$LONGITUDE\n      new_row &lt;- data.frame(address= i, \n                            postal = postal, \n                            latitude = lat, \n                            longitude = lng)\n    }\n    \n    # If multiple results, drop NIL and append top 1\n    else if (found &gt; 1){\n      # Remove those with NIL as postal\n      res_sub &lt;- res[res$POSTAL != \"NIL\", ]\n      \n      # Set as NA first if no Postal\n      if (nrow(res_sub) == 0) {\n          new_row &lt;- data.frame(address= i, \n                                postal = NA, \n                                latitude = NA, \n                                longitude = NA)\n      }\n      \n      else{\n        top1 &lt;- head(res_sub, n = 1)\n        postal &lt;- top1$POSTAL \n        lat &lt;- top1$LATITUDE\n        lng &lt;- top1$LONGITUDE\n        new_row &lt;- data.frame(address= i, \n                              postal = postal, \n                              latitude = lat, \n                              longitude = lng)\n      }\n    }\n\n    else {\n      new_row &lt;- data.frame(address= i, \n                            postal = NA, \n                            latitude = NA, \n                            longitude = NA)\n    }\n    \n    # Add the row\n    postal_coords &lt;- rbind(postal_coords, new_row)\n  }\n  return(postal_coords)\n}\n\nWe run the get_coords function on the add_list.\n\ncoords &lt;- get_coords(add_list)\n\n\nwrite_rds(coords, \"data/rds/coords.rds\")\n\n\neldercare = st_read(dsn = 'data/rawdata',\n                    layer = 'ELDERCARE') |&gt;\n  st_transform(crs = 3414)\n\nReading layer `ELDERCARE' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\Take-home_Ex\\Take-home_Ex03\\data\\rawdata' \n  using driver `ESRI Shapefile'\nSimple feature collection with 133 features and 18 fields\nGeometry type: POINT\nDimension:     XY\nBounding box:  xmin: 14481.92 ymin: 28218.43 xmax: 41665.14 ymax: 46804.9\nProjected CRS: SVY21\n\n\n\nCHAS = st_read('data/rawdata/CHASClinics.kml') |&gt;\n  st_transform(crs = 3414)\n\nReading layer `MOH_CHAS_CLINICS' from data source \n  `C:\\thuphuong1110\\ISSS626-GAA\\Take-home_Ex\\Take-home_Ex03\\data\\rawdata\\CHASClinics.kml' \n  using driver `KML'\nSimple feature collection with 1193 features and 2 fields\nGeometry type: POINT\nDimension:     XYZ\nBounding box:  xmin: 103.5818 ymin: 1.016264 xmax: 103.9903 ymax: 1.456037\nz_range:       zmin: 0 zmax: 0\nGeodetic CRS:  WGS 84\n\n\n\n\n3 Count number of points within a Distance\nCount all the eldercare/clinics within 1km from the HDB\n\nbuffer_1km = st_buffer(eldercare, dist = 1000)\n\n\ntmap_mode('view')\n\ntmap mode set to interactive viewing\n\ntm_shape(buffer_1km) + # plot the larger share first (polygon &gt; points)\n  tm_polygons() +\n  tm_shape(CHAS) +\n  tm_dots()\n\n\n\n\ntmap_mode('plot')\n\ntmap mode set to plotting\n\n\n\nbuffer_1km$clinic_count = lengths(\n  st_intersects(buffer_1km, CHAS))"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex09/data/geospatial/hexagons.html",
+    "href": "In-class_Ex/In-class_Ex09/data/geospatial/hexagons.html",
+    "title": "ISSS626-GAA",
+    "section": "",
+    "text": "&lt;!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’&gt;     dataset\n\n\n                 0 0     false"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex09/data/geospatial/ELDERCARE.html",
+    "href": "In-class_Ex/In-class_Ex09/data/geospatial/ELDERCARE.html",
+    "title": "ISSS626-GAA",
+    "section": "",
+    "text": "&lt;!DOCTYPE qgis PUBLIC ‘http://mrcc.com/qgis.dtd’ ‘SYSTEM’&gt;  ELDERCARE  ENG dataset\n\nELDERCARE\n\n                 0 0     false"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex09/In-class_Ex09.html",
+    "href": "In-class_Ex/In-class_Ex09/In-class_Ex09.html",
+    "title": "In-class Exercise 9: Modelling Geographic of Accessibility",
+    "section": "",
+    "text": "pacman::p_load(tmap, SpatialAcc, sf, \n               ggstatsplot, reshape2,\n               tidyverse, rstantools)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#tidy-distance-matrix",
+    "href": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#tidy-distance-matrix",
+    "title": "In-class Exercise 9: Modelling Geographic of Accessibility",
+    "section": "3.1 Tidy Distance matrix",
+    "text": "3.1 Tidy Distance matrix\nThe imported ODMatrix organised the distance matrix columnwise. However, most of the modelling packages in R is expecting a matrix look where The rows represent origins (also know as from field) and the columns represent destination (i.e. also known as to field.).\nThe pivot_wider() function from the tidyr package was used to transform the O-D matrix from a long format to a wide format.\n\ndistmat &lt;- ODMatrix %&gt;%\n  select(origin_id, destination_id, total_cost) %&gt;%\n  pivot_wider(names_from = destination_id, values_from = total_cost)%&gt;%\n  select(c(-c('origin_id')))\n\nAs SVY21 projected coordinate system is used, the distance is measured in metre. The code chunk below convert the unit measurement from metre to kilometre.\n\ndistmat_km &lt;- as.matrix(distmat/1000)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#compute-hansens-accessibility",
+    "href": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#compute-hansens-accessibility",
+    "title": "In-class Exercise 9: Modelling Geographic of Accessibility",
+    "section": "4.1 Compute Hansen’s accessibility",
+    "text": "4.1 Compute Hansen’s accessibility\nNow we are ready to compute Hansen’s accessibility using the ac() function from the SpatialAcc package. Before proceeding, it’s advisable to review the function’s arguments at least once to ensure that all required inputs are available.\nThe code chunk below calculates Hansen’s accessibility, using ac() from the SpatialAcc package, and saves the output in a data frame called acc_Hansen using the data.frame() function.\n\nacc_Hansen &lt;- data.frame(ac(hexagons$demand,\n                            eldercare$capacity,\n                            distmat_km, \n                            #d0 = 50,\n                            power = 2, \n                            family = \"Hansen\"))\n\nThe default field name is messy, we rename it to accHansen using the code chunk below.\n\ncolnames(acc_Hansen) &lt;- \"accHansen\"\n\nNext, we convert the data table into tibble format by using the code chunk below.\n\nacc_Hansen &lt;- as_tibble(acc_Hansen)\n\nLastly, bind_cols() of dplyr is used to join the acc_Hansen tibble data frame with the hexagons simple feature data frame. The output is saved in hexagon_Hansen.\n\nhexagon_Hansen &lt;- bind_cols(hexagons, acc_Hansen)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#visualize-hansens-accessibility",
+    "href": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#visualize-hansens-accessibility",
+    "title": "In-class Exercise 9: Modelling Geographic of Accessibility",
+    "section": "4.2 Visualize Hansen’s accessibility",
+    "text": "4.2 Visualize Hansen’s accessibility\nFirst we extract the extend of hexagons simple feature data frame by using st_bbox() of sf package.\n\nmapex &lt;- st_bbox(hexagons)\n\nThe code chunk below uses a collection of mapping fucntions of tmap package to create a high cartographic quality accessibility to eldercare centre in Singapore.\n\ntm_shape(hexagon_Hansen,\n         bbox = mapex) + \n  tm_fill(col = \"accHansen\",\n          n = 10,\n          style = \"quantile\",\n          border.col = \"black\",\n          border.lwd = 1) +\ntm_shape(eldercare) +\n  tm_symbols(size = 0.1) +\n  tm_layout(main.title = \"Accessibility to eldercare: Hansen method\",\n            main.title.position = \"center\",\n            main.title.size = 2,\n            legend.outside = FALSE,\n            legend.height = 0.45, \n            legend.width = 3.0,\n            legend.format = list(digits = 6),\n            legend.position = c(\"right\", \"top\"),\n            frame = TRUE) +\n  tm_compass(type=\"8star\", size = 2) +\n  tm_scale_bar(width = 0.15) +\n  tm_grid(lwd = 0.1, alpha = 0.5)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#statistical-graphic",
+    "href": "In-class_Ex/In-class_Ex09/In-class_Ex09.html#statistical-graphic",
+    "title": "In-class Exercise 9: Modelling Geographic of Accessibility",
+    "section": "4.3 Statistical Graphic",
+    "text": "4.3 Statistical Graphic\n\nhexagon_Hansen = st_join(hexagon_Hansen, mpsz,\n                         join = st_intersects)\n\n\nggbetweenstats(\n  data = hexagon_Hansen,\n  x = REGION_N,\n  y = accHansen,\n  type = 'p'\n)"
   }
 ]

@@ -53,6 +53,8 @@ website:
           href: In-class_Ex/In-class_Ex07/In-class_Ex07.html
         - text: "8 - Geographically Weighted Predictive Models"
           href: In-class_Ex/In-class_Ex08/In-class_Ex08.html
+        - text: "9 - Modelling Geographic of Accessibility"
+          href: In-class_Ex/In-class_Ex09/In-class_Ex09.html
       - text: "Take-home Exercise"
         menu: 
         - text: "1 - Geospatial Analytics for Public Good"
