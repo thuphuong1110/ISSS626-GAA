@@ -53,7 +53,7 @@ pacman::p_load(tmap, sf, DT, stplanr, tidyverse)
 First we import the *Passenger Volume by Origin Destination Bus Stops* data set downloaded from LTA DataMall using `read_csv()` of **readr** package.
 
 ```{r}
-odbus <- read_csv("data/aspatial/origin_destination_bus_202409.csv")
+odbus <- read_csv("data/aspatial/origin_destination_bus_202210.csv")
 ```
 
 We display the *odbus* tibble data table by using the code chunk below.
