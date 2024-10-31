@@ -1,5 +1,5 @@
 ---
-title: "In-class Exercise 9: Modelling Geographic of Accessibility"
+title: "In-class Exercise 9: Modelling Geography of Accessibility"
 author: "Nguyen Bao Thu Phuong"
 date: "28 October 2024" 
 date-modified: "last-modified"
@@ -98,17 +98,9 @@ The default field name is messy, we rename it to `accHansen` using the code ch
 
 ```{r}
 colnames(acc_Hansen) <- "accHansen"
-```
 
-Next, we convert the data table into tibble format by using the code chunk below.
-
-```{r}
 acc_Hansen <- as_tibble(acc_Hansen)
-```
 
-Lastly, *bind_cols()* of **dplyr** is used to join the `acc_Hansen` tibble data frame with the `hexagons` simple feature data frame. The output is saved in `hexagon_Hansen`.
-
-```{r}
 hexagon_Hansen <- bind_cols(hexagons, acc_Hansen)
 ```
 
@@ -160,4 +152,46 @@ ggbetweenstats(
   y = accHansen,
   type = 'p'
 )
+```
+
+# Count Number of Points within a Distance
+
+The below code chunk facilitate counting the number of point features (i.e. CHAS clinics) within 1km of another point features (i.e. eldercare centre).
+
+First we read in the ELDERCARE shapefile and CHAS clinic kml file using below code chunk.
+
+```{r}
+eldercare <- st_read(dsn = "data/rawdata",
+                     layer = "ELDERCARE") %>%
+  st_transform(crs = 3414)
+```
+
+```{r}
+CHAS <- st_read("data/rawdata/CHASClinics.kml") %>%
+  st_transform(crs = 3414)
+```
+
+Next, `st_buffer()` of sf package is used to create a buffer of 1km around each eldercare.
+
+```{r}
+buffer_1km <- st_buffer(eldercare, 
+                        dist = 1000)
+```
+
+The code chunk below plots the newly created buffers and the CHAS clinics.
+
+```{r}
+tmap_mode("view")
+tm_shape(buffer_1km) +
+  tm_polygons() +
+tm_shape(CHAS) +
+  tm_dots()
+tmap_mode('plot')
+```
+
+Lastly, the code chunk below counts the number of CHAS clinics with 1km of each eldercare centre.
+
+```{r}
+buffer_1km$pts_count <- lengths(
+  st_intersects(buffer_1km, CHAS))
 ```
