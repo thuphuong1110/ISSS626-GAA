@@ -423,7 +423,7 @@ In this section, we fit an origin constrained SIM using the code chunk below.
 
 The general formula of Origin Constrained Spatial Interaction Model
 
-![](formula 2.png)
+![](formula%202.png)
 
 ```{r}
 orcSIM <- glm(formula = TRIPS ~ 

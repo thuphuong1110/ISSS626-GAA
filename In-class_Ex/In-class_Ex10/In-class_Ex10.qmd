@@ -1,0 +1,11 @@
+---
+title: "In-class Exercise 10: Working with Open Goverment Data"
+author: "Nguyen Bao Thu Phuong"
+date: "4 November 2024" 
+date-modified: "last-modified"
+execute:
+  eval: true
+  echo: true
+  message: false
+  freeze: true
+---

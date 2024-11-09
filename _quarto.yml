@@ -59,8 +59,10 @@ website:
         menu: 
         - text: "1 - Geospatial Analytics for Public Good"
           href: "Take-home_Ex/Take-home_Ex01/Take-home_Ex01.html"
-        - text: "2 - Discovering impacts of COVID-19 on Thailand tourism economy using spatial and spatio-temporal statistics"
+        - text: "2 - Discover impacts of COVID-19 on Thailand tourism economy using spatial and spatio-temporal statistics"
           href: "Take-home_Ex/Take-home_Ex02/Take-home_Ex02.html"
+        - text: "3 - Predict HDB Resale Prices with Geographically Weighted Machine Learning Methods"
+          href: "Take-home_Ex/Take-home_Ex03/Take-home_Ex03.html"
     right:
       - href: index.qmd
         text: Home
