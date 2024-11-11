@@ -1,7 +1,7 @@
 ---
 title: "In-class Exercise 10: Working with Open Goverment Data"
 author: "Nguyen Bao Thu Phuong"
-date: "4 November 2024" 
+date: "11 November 2024" 
 date-modified: "last-modified"
 execute:
   eval: true
@@ -9,3 +9,141 @@ execute:
   message: false
   freeze: true
 ---
+
+# Overview
+
+By the end of this exercise, you will be able to:
+
+-   Prepare REALIS portal data for geocoding
+
+-   Geocode using the SLA OneMap API
+
+-   Convert geocoded transaction data into an sf point feature data frame
+
+-   Wrangle sf point features to prevent overlapping points
+
+# Install R Packages
+
+First we install relevant R packages using `p_load()` function from **pacman** package.
+
+```{r}
+pacman::p_load(tidyverse, sf, tmap, httr, performance)
+```
+
+# Import the Data
+
+The following code chunk imports multiple CSV files from a specified folder and combines them into a single tibble data frame:
+
+```{r}
+#| warning: false
+folder_path <- "data/aspatial"
+file_list <- list.files(path = folder_path, 
+                        pattern = "^Residential.*\\.csv$", 
+                        full.names = TRUE)
+
+realis_data <- file_list %>%
+  map_dfr(read_csv)
+```
+
+# Data Wrangling
+
+The code chunk below converts values in the `Sale Date` field from character to date format and extracts records for resale and condominium transactions.
+
+```{r}
+condo_resale <- realis_data %>%
+  mutate(`Sale Date` = dmy(`Sale Date`)) %>%
+  filter(`Type of Sale` == "Resale" &
+           `Property Type` == "Condominium")
+```
+
+## Geocoding
+
+First we extract a list of unique postal codes from `condo_resale`.
+
+```{r}
+postcode_list <- unique(condo_resale$`Postal Code`)
+```
+
+The below code chunks reads in `postcode` list and return the respective address as scraped from OneMap API.
+
+```{r}
+#| eval: false
+url <- "https://onemap.gov.sg/api/common/elastic/search"
+found <- data.frame()
+not_found <- data.frame()
+
+for (postcode in postcode_list){
+  query <- list('searchVal'=postcode, 'returnGeom'='Y', 
+                'getAddrDetails'='Y', 'pageNum'='1')
+  res <- GET(url, query=query)
+  if ((content(res)$found)!=0){
+    found <- rbind(found, data.frame(content(res))[4:13])
+  } else {not_found = data.frame(postcode)
+  }
+}
+```
+
+## Tidy Field Name
+
+The below code chunk shorten the field names and select relevant columns.
+
+```{r}
+#| eval: false
+found <- found %>%
+  select(c(6:8)) %>%
+  rename(POSTAL = `results.POSTAL`,
+         XCOORD = `results.X`,
+         YCOORD = `results.Y`)
+```
+
+We write the result to rds file for further use.
+
+```{r}
+#| eval: false
+write_rds(found,"data/rds/found_add.rds")
+```
+
+The below code chunk read the obtained addresses from rds file.
+
+```{r}
+found = read_rds("data/rds/found_add.rds")
+```
+
+## Convert to Point Feature Data Frame
+
+The below code chunk left joins `condo_resale` with `found`. The output is saved in `condo_resale_geocoded`.
+
+```{r}
+condo_resale_geocoded = left_join(
+  condo_resale, found, 
+  by = c('Postal Code' = 'POSTAL'))
+```
+
+Next we convert `condo_resale_geocoded` to sf dataframe using the below code chunk.
+
+```{r}
+condo_resale_sf <- st_as_sf(condo_resale_geocoded, 
+                            coords = c("XCOORD",
+                                       "YCOORD"),
+                            crs=3414)
+```
+
+## Cleaning Geospatial Data
+
+The below code chunk below checks if there are overlapping point features.
+
+```{r}
+overlapping_points <- condo_resale_sf %>%
+  mutate(overlap = lengths(st_equals(., .)) > 1)
+
+sum(overlapping_points$overlap == TRUE)
+```
+
+The output shows that there are 5301 overlapping points. This is expected to happen as flats in the same block will have the same postal code, which indicate same address and coordinates.
+
+The below code chunk uses `st_jitter()` function of **sf** package to move the point features by 2m to avoid overlapping.
+
+```{r}
+condo_resale_sf <- condo_resale_sf %>%
+  st_jitter(amount = 2)
+```

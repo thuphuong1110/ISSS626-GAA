@@ -2525,5 +2525,40 @@
     "title": "Take-home Exercise 3: Preparing HDB data for Geographically Weighted Predictive Model",
     "section": "10.2 Visualize the Predicted Values",
     "text": "10.2 Visualize the Predicted Values\nUsing a scatterplot to visualize actual versus predicted resale prices on the test dataset offers a clear, intuitive way to assess model performance. By plotting actual prices on one axis and predicted prices on the other, we can quickly see how well the model aligns with real values. Ideally, the points should fall along a 45-degree line, indicating that predictions closely match actual outcomes. Deviations from this line reveal errors and can highlight patterns, such as systematic under- or over-predictions. Additionally, scatterplots can help identify any potential outliers or segments where the model performs poorly, providing valuable insights for model refinement.\nThe below code chunk uses ggplot function to create 3 scatterplots on actual resale prices and predicted resale prices of the 3 models derived. The output plot are saved in plot_lm, plot_rf and plot_grf.\n\n# Linear regression scatter plot\nplot_lm = ggplot(data = test_data,\n       aes(x = resale_price,\n           y = lm_resale_price)) +\n   geom_point(alpha = 0.5) +\n  geom_abline(slope = 1, intercept = 0, color = \"red\", linetype = \"dashed\") +\n  labs(x = \"Actual Resale Price\", \n       y = \"Predicted Resale Price (Linear Regression)\", \n       title = \"MLR\") +\n  theme_minimal()\n# Random forrest scatter plot\nplot_rf = ggplot(data = test_data_nogeo,\n       aes(x = resale_price,\n           y = rf_resale_price)) +\n  geom_point(alpha = 0.5) +\n  geom_abline(slope = 1, intercept = 0, color = \"red\", linetype = \"dashed\") +\n  labs(x = \"Actual Resale Price\", \n       y = \"Predicted Resale Price (Random Forest)\", \n       title = \"RF\") +\n  theme_minimal()\n# GWRF scatter plot\nplot_grf = ggplot(data = test_data_p,\n       aes(x = resale_price,\n           y = GRF_pred)) +\n  geom_point(alpha = 0.5) +\n  geom_abline(slope = 1, intercept = 0, color = \"red\", linetype = \"dashed\") +\n  labs(x = \"Actual Resale Price\", \n       y = \"Predicted Resale Price (GWRF)\", \n       title = \"GWRF\") +\n  theme_minimal()\n\nThe below code chunk use grid.arrange() function from gridExtra package to draw the 3 scatter plots on the same row for easier comparison.\n\ngridExtra::grid.arrange(plot_lm, plot_rf, plot_grf, nrow = 1)\n\n\n\n\n\n\n\n\nThe scatter plots of all three models show most points falling below the diagonal, indicating a tendency to underpredict resale prices, especially as prices increase. In the GWRF model, some of the points deviate significantly from the diagonal line, explaining why its RMSE is significantly higher compared to the other models. This supports the earlier observation of potential overfitting in the GWRF model, and calculating the optimal adaptive bandwidth could help improve its performance."
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex10/In-class_Ex10.html",
+    "href": "In-class_Ex/In-class_Ex10/In-class_Ex10.html",
+    "title": "In-class Exercise 10: Working with Open Goverment Data",
+    "section": "",
+    "text": "By the end of this exercise, you will be able to:\n\nPrepare REALIS portal data for geocoding\nGeocode using the SLA OneMap API\nConvert geocoded transaction data into an sf point feature data frame\nWrangle sf point features to prevent overlapping points"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#geocoding",
+    "href": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#geocoding",
+    "title": "In-class Exercise 10: Working with Open Goverment Data",
+    "section": "4.1 Geocoding",
+    "text": "4.1 Geocoding\nFirst we extract a list of unique postal codes from condo_resale.\n\npostcode_list &lt;- unique(condo_resale$`Postal Code`)\n\nThe below code chunks reads in postcode list and return the respective address as scraped from OneMap API.\n\nurl &lt;- \"https://onemap.gov.sg/api/common/elastic/search\"\nfound &lt;- data.frame()\nnot_found &lt;- data.frame()\n\nfor (postcode in postcode_list){\n  query &lt;- list('searchVal'=postcode, 'returnGeom'='Y', \n                'getAddrDetails'='Y', 'pageNum'='1')\n  res &lt;- GET(url, query=query)\n  if ((content(res)$found)!=0){\n    found &lt;- rbind(found, data.frame(content(res))[4:13])\n  } else {not_found = data.frame(postcode)\n  }\n}"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#tidy-field-name",
+    "href": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#tidy-field-name",
+    "title": "In-class Exercise 10: Working with Open Goverment Data",
+    "section": "4.2 Tidy Field Name",
+    "text": "4.2 Tidy Field Name\nThe below code chunk shorten the field names and select relevant columns.\n\nfound &lt;- found %&gt;%\n  select(c(6:8)) %&gt;%\n  rename(POSTAL = `results.POSTAL`,\n         XCOORD = `results.X`,\n         YCOORD = `results.Y`)\n\nWe write the result to rds file for further use.\n\nwrite_rds(found,\"data/rds/found_add.rds\")\n\nThe below code chunk read the obtained addresses from rds file.\n\nfound = read_rds(\"data/rds/found_add.rds\")"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#convert-to-point-feature-data-frame",
+    "href": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#convert-to-point-feature-data-frame",
+    "title": "In-class Exercise 10: Working with Open Goverment Data",
+    "section": "4.3 Convert to Point Feature Data Frame",
+    "text": "4.3 Convert to Point Feature Data Frame\nThe below code chunk left joins condo_resale with found. The output is saved in condo_resale_geocoded.\n\ncondo_resale_geocoded = left_join(\n  condo_resale, found, \n  by = c('Postal Code' = 'POSTAL'))\n\nNext we convert condo_resale_geocoded to sf dataframe using the below code chunk.\n\ncondo_resale_sf &lt;- st_as_sf(condo_resale_geocoded, \n                            coords = c(\"XCOORD\",\n                                       \"YCOORD\"),\n                            crs=3414)"
+  },
+  {
+    "objectID": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#cleaning-geospatial-data",
+    "href": "In-class_Ex/In-class_Ex10/In-class_Ex10.html#cleaning-geospatial-data",
+    "title": "In-class Exercise 10: Working with Open Goverment Data",
+    "section": "4.4 Cleaning Geospatial Data",
+    "text": "4.4 Cleaning Geospatial Data\nThe below code chunk below checks if there are overlapping point features.\n\noverlapping_points &lt;- condo_resale_sf %&gt;%\n  mutate(overlap = lengths(st_equals(., .)) &gt; 1)\n\nsum(overlapping_points$overlap == TRUE)\n\n[1] 5301\n\n\nThe output shows that there are 5301 overlapping points. This is expected to happen as flats in the same block will have the same postal code, which indicate same address and coordinates.\nThe below code chunk uses st_jitter() function of sf package to move the point features by 2m to avoid overlapping.\n\ncondo_resale_sf &lt;- condo_resale_sf %&gt;%\n  st_jitter(amount = 2)"
   }
 ]
